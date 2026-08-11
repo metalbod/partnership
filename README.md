@@ -2,11 +2,11 @@
 
 Not yet started. Per TDD Section 9.2, all AWS infrastructure (VPC, subnets,
 security groups, ECS, RDS, S3, IAM roles, etc.) should be defined as
-Infrastructure as Code \u2013 Terraform or AWS CDK, tool choice to be confirmed
+Infrastructure as Code – Terraform or AWS CDK, tool choice to be confirmed
 with the Cloud/DevOps Engineer at Sprint 0 (see SDD Section 8.3).
 
 `infra/local/` currently only contains a Postgres init script used by the root
-`docker-compose.yml` for local development \u2013 that's local-dev tooling, not
+`docker-compose.yml` for local development – that's local-dev tooling, not
 IaC for AWS.
 
 ## What needs to be built here (see TDD for full detail)
