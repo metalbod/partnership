@@ -29,7 +29,7 @@ API docs: http://localhost:8082/swagger-ui.html
 ## \u26a0\ufe0f Critical business rule
 Once a bundle is `PUBLISHED`, its `offeringIds` are **immutable**. Any change to the
 offering mix MUST go through `POST /v1/bundles/{id}/new-version`, which creates a new
-`Bundle` row and marks the old one `SUPERSEDED` \u2013 never `PUT`/mutate a published
+`Bundle` row and marks the old one `SUPERSEDED` – never `PUT`/mutate a published
 bundle's offerings directly. See `BundleService` Javadoc for the full rationale.
 
 See `CLAUDE.md` in this folder and the workspace-root `CLAUDE.md` before extending.
