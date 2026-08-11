@@ -1,4 +1,4 @@
-# CLAUDE.md \u2013 transaction-profitshare-service
+# CLAUDE.md – transaction-profitshare-service
 
 Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes.
 
@@ -7,7 +7,7 @@ Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes
 - `Transaction` denormalises `partnerId` and `vendorId` (not just `offeringId` and
   `bundleId`) specifically so profit-share attribution doesn't require a
   cross-service call at report-generation time. Keep this denormalisation when
-  extending the entity \u2013 it's intentional, not an oversight.
+  extending the entity – it's intentional, not an oversight.
 
 ## Known gaps in this scaffold (see TODOs in the code)
 - `ProfitShareCalculationService.resolveRule()` only does an exact
@@ -16,11 +16,11 @@ Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes
   Implement the fallback before relying on this for anything beyond a single demo
   vendor/bundle/partner combination.
 - `runPeriodicCalculation()` computes splits per transaction but does not yet
-  persist line items or export a file to S3 (TDD Section 4.3 \u2013 Reporting & Export
+  persist line items or export a file to S3 (TDD Section 4.3 – Reporting & Export
   Service). Add a `ProfitShareReportLine` entity and an S3 export step before this
   is usable end-to-end.
 - No idempotency guard yet on the batch job (re-running for the same period could
-  double-count if `includedInReportId` isn't set correctly) \u2013 verify the update to
+  double-count if `includedInReportId` isn't set correctly) – verify the update to
   `Transaction.includedInReportId` happens atomically with report generation.
 
 ## Do NOT do here

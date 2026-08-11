@@ -24,12 +24,12 @@ API docs: http://localhost:8084/swagger-ui.html
 | POST | /v1/profit-share/run?periodStart=...&periodEnd=... | Run the periodic calculation (local/manual trigger; production trigger is the scheduled AWS Lambda job per TDD 4.4) |
 
 ## \u26a0\ufe0f Critical business rules
-- **MVP is reporting-only \u2013 no payment execution** (BRD FR-RPT-07). Do not add any
-  code that moves money, calls a payment gateway, or marks a report "paid" \u2013 that
+- **MVP is reporting-only – no payment execution** (BRD FR-RPT-07). Do not add any
+  code that moves money, calls a payment gateway, or marks a report "paid" – that
   is explicitly out of scope until the future ledger/settlement platform exists
   (see TDD Section 12).
 - Insurance offerings must capture `premium`, `sumInsured`, `policyNumber` at the
-  point of transaction (BRD Section 6.2) \u2013 these are transaction-time facts, not
+  point of transaction (BRD Section 6.2) – these are transaction-time facts, not
   offering-level facts (which live in vendor-offering-service).
 
 See `CLAUDE.md` in this folder and the workspace-root `CLAUDE.md` before extending.
