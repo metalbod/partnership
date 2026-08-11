@@ -1,0 +1,57 @@
+openapi: 3.0.3
+info:
+  title: Partnership Pillar \u2013 Consumer Entitlement Query API
+  version: "1.0"
+  description: >
+    Contract for other pillars (Store-Front, Loyalty) to retrieve a consumer's
+    active bundle entitlements. See BRD FR-CON-02, SDD Section 6.
+servers:
+  - url: https://api.partnership.internal/v1
+paths:
+  /entitlements:
+    get:
+      summary: Get a consumer's active bundle entitlements
+      operationId: getEntitlements
+      security:
+        - oauth2ClientCredentials: []
+      parameters:
+        - name: consumerExternalId
+          in: query
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Active entitlements for the consumer
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  consumerExternalId:
+                    type: string
+                  entitlements:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        partnerId:
+                          type: string
+                          format: uuid
+                        bundleId:
+                          type: string
+                          format: uuid
+                        bundleVersion:
+                          type: integer
+                        status:
+                          type: string
+                          enum: [ACTIVE]
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.partnership.internal/oauth2/token
+          scopes:
+            entitlement:read: Read consumer bundle entitlements

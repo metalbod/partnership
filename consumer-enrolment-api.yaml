@@ -1,0 +1,70 @@
+openapi: 3.0.3
+info:
+  title: Partnership Pillar \u2013 Consumer Enrolment API
+  version: "1.0"
+  description: >
+    Contract for the Store-Front (B2C) pillar to register a consumer against a
+    partner's ACTIVE bundle subscription. See BRD FR-CON-01/03, SDD Section 6.
+    MVP: contract published, mock/stub implementation only \u2013 no live Store-Front
+    caller yet.
+servers:
+  - url: https://api.partnership.internal/v1
+paths:
+  /enrolments:
+    post:
+      summary: Register a consumer against a partner's active bundle subscription
+      operationId: createEnrolment
+      security:
+        - oauth2ClientCredentials: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EnrolmentRequest"
+      responses:
+        "201":
+          description: Enrolment created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EnrolmentResponse"
+        "409":
+          description: >
+            Partner's subscription is not ACTIVE (e.g. PENDING_RECONSENT or
+            SUPERSEDED) \u2013 enrolment must be rejected per BRD Section 4.4 step 2.
+components:
+  securitySchemes:
+    oauth2ClientCredentials:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: https://auth.partnership.internal/oauth2/token
+          scopes:
+            enrolment:write: Create consumer enrolments
+  schemas:
+    EnrolmentRequest:
+      type: object
+      required: [consumerExternalId, partnerId, bundleId]
+      properties:
+        consumerExternalId:
+          type: string
+          description: Consumer identifier owned by the Store-Front pillar (not this platform).
+        partnerId:
+          type: string
+          format: uuid
+        bundleId:
+          type: string
+          format: uuid
+    EnrolmentResponse:
+      type: object
+      properties:
+        enrolmentId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [ACTIVE]
+        enrolledAt:
+          type: string
+          format: date-time
