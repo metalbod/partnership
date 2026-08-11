@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: Partnership Pillar \u2013 Consumer Entitlement Query API
+  title: Partnership Pillar – Consumer Entitlement Query API
   version: "1.0"
   description: >
     Contract for other pillars (Store-Front, Loyalty) to retrieve a consumer's

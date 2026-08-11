@@ -1,8 +1,8 @@
-# API Contracts \u2013 Cross-Pillar Integration
+# API Contracts – Cross-Pillar Integration
 
 Published, versioned contracts between the Partnership Pillar and the other three
 platforms (Value-Added Services, Loyalty, Store-Front/B2C), per SDD Section 6 and
-TDD Section 7. MVP implements these as mocks/stubs \u2013 no live calls to the other
+TDD Section 7. MVP implements these as mocks/stubs – no live calls to the other
 pillars yet, since those platforms don't exist. Building against these contracts
 now means integration later is a wiring exercise, not a redesign.
 
