@@ -1,6 +1,6 @@
 # Vendor & Offering Service
 
-Owns Vendors and their Offerings (insurance or non-insurance \u2013 generic flow in MVP).
+Owns Vendors and their Offerings (insurance or non-insurance – generic flow in MVP).
 
 **Responsibility (SDD Section 3.1):** CRUD for vendors and their offerings; supports
 offerings existing without eco-system/bundle assignment (BRD FR-VEN-04).
