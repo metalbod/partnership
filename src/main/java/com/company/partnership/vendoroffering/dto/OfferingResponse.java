@@ -1,0 +1,20 @@
+package com.company.partnership.vendoroffering.dto;
+
+import com.company.partnership.vendoroffering.domain.Offering;
+
+import java.util.UUID;
+
+public record OfferingResponse(
+        UUID id,
+        UUID vendorId,
+        String name,
+        String description,
+        Offering.OfferingType offeringType,
+        Offering.OfferingStatus status
+) {
+    public static OfferingResponse from(Offering o) {
+        return new OfferingResponse(
+                o.getId(), o.getVendor().getId(), o.getName(), o.getDescription(),
+                o.getOfferingType(), o.getStatus());
+    }
+}
