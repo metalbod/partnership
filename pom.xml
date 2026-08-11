@@ -15,7 +15,7 @@
     <artifactId>partner-subscription-service</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <name>partner-subscription-service</name>
-    <description>Partner & Subscription Service \u2013 Partnership Pillar Platform</description>
+    <description>Partner &amp; Subscription Service – Partnership Pillar Platform</description>
 
     <properties>
         <java.version>21</java.version>
