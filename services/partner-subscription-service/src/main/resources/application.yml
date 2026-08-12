@@ -1,0 +1,35 @@
+spring:
+  application:
+    name: partner-subscription-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=partnersubscription
+    username: ${DB_USERNAME:partnersubscription_app}
+    password: ${DB_PASSWORD:changeme_local_only}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  profiles:
+    active: local
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-southeast-5}
+
+server:
+  port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+app:
+  events:
+    bundle-superseded:
+      queue-name: ${BUNDLE_SUPERSEDED_QUEUE_NAME:bundle-superseded-queue}
