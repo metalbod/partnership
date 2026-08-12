@@ -1,0 +1,26 @@
+spring:
+  application:
+    name: vendor-offering-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=vendoroffering
+    username: ${DB_USERNAME:vendoroffering_app}
+    password: ${DB_PASSWORD:changeme_local_only}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  profiles:
+    active: local
+
+server:
+  port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
