@@ -2,8 +2,8 @@ spring:
   application:
     name: vendor-offering-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_vendoroffering
-    username: ${DB_USERNAME:partnership_app}
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=vendoroffering
+    username: ${DB_USERNAME:vendoroffering_app}
     password: ${DB_PASSWORD:changeme_local_only}
   jpa:
     hibernate:

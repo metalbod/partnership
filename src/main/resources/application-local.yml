@@ -3,7 +3,7 @@ spring:
     hibernate:
       ddl-auto: update
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_vendoroffering
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=vendoroffering
 logging:
   level:
     com.company.partnership: DEBUG
