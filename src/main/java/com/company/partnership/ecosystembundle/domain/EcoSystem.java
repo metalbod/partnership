@@ -39,8 +39,12 @@ public class EcoSystem {
     @Column(nullable = false)
     private EcoSystemStatus status = EcoSystemStatus.ACTIVE;
 
-    /** Offerings assigned to this eco-system, referenced by ID from vendor-offering-service (no FK across services). */
-    @ElementCollection
+    /**
+     * Offerings assigned to this eco-system, referenced by ID from vendor-offering-service
+     * (no FK across services). EAGER for the same reason as Bundle.offeringIds: always
+     * needed for API serialization, and open-in-view is off.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "eco_system_offering", joinColumns = @JoinColumn(name = "eco_system_id"))
     @Column(name = "offering_id")
     private List<UUID> assignedOfferingIds = new ArrayList<>();

@@ -51,8 +51,12 @@ public class Bundle {
     @Column(nullable = false)
     private BundleStatus status = BundleStatus.DRAFT;
 
-    /** Offering IDs locked into this bundle version (immutable once status = PUBLISHED). */
-    @ElementCollection
+    /**
+     * Offering IDs locked into this bundle version (immutable once status = PUBLISHED).
+     * EAGER: always needed when serializing a Bundle to the API response, and
+     * open-in-view is off, so LAZY throws outside the @Transactional service method.
+     */
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "bundle_offering", joinColumns = @JoinColumn(name = "bundle_id"))
     @Column(name = "offering_id")
     private List<UUID> offeringIds = new ArrayList<>();

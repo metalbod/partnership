@@ -7,3 +7,12 @@ spring:
 logging:
   level:
     com.company.partnership: DEBUG
+
+aws:
+  eventbridge:
+    endpoint-override: http://localhost:4566
+
+app:
+  events:
+    bundle-superseded:
+      event-bus-name: partnership-pillar-local

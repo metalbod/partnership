@@ -3,6 +3,8 @@ package com.company.partnership.ecosystembundle.service;
 import com.company.partnership.ecosystembundle.domain.Bundle;
 import com.company.partnership.ecosystembundle.domain.EcoSystem;
 import com.company.partnership.ecosystembundle.dto.BundleRequest;
+import com.company.partnership.ecosystembundle.event.BundleSupersededEvent;
+import com.company.partnership.ecosystembundle.event.BundleSupersededEventPublisher;
 import com.company.partnership.ecosystembundle.exception.InvalidBundleOperationException;
 import com.company.partnership.ecosystembundle.exception.NotFoundException;
 import com.company.partnership.ecosystembundle.repository.BundleRepository;
@@ -32,6 +34,7 @@ public class BundleService {
 
     private final BundleRepository bundleRepository;
     private final EcoSystemRepository ecoSystemRepository;
+    private final BundleSupersededEventPublisher eventPublisher;
 
     public Bundle create(BundleRequest req) {
         EcoSystem ecoSystem = ecoSystemRepository.findById(req.ecoSystemId())
@@ -60,12 +63,10 @@ public class BundleService {
     /**
      * Creates a new version of a published bundle with a revised offering mix.
      * The prior version is marked SUPERSEDED. Does NOT mutate the original bundle's
-     * offeringIds (FR-BUN-03). Callers (or an async listener on the emitted event)
-     * are responsible for triggering partner re-consent in partner-subscription-service.
-     *
-     * TODO (integration stub, see /api-contracts): publish a BundleSuperseded domain
-     * event to EventBridge so partner-subscription-service can flag affected
-     * PartnerSubscriptions as PENDING_RECONSENT without a synchronous call.
+     * offeringIds (FR-BUN-03). Publishes a BundleSuperseded event (see /api-contracts)
+     * on commit so partner-subscription-service can flag affected PartnerSubscriptions
+     * as PENDING_RECONSENT asynchronously via its EventBridge/SQS listener, instead of
+     * requiring a synchronous caller to hit its flag-pending-reconsent endpoint.
      */
     public Bundle createNewVersion(UUID existingBundleId, BundleRequest req) {
         Bundle existing = findById(existingBundleId);
@@ -85,7 +86,13 @@ public class BundleService {
         existing.setStatus(Bundle.BundleStatus.SUPERSEDED);
         existing.setUpdatedAt(Instant.now());
 
-        return bundleRepository.save(newVersion);
+        Bundle saved = bundleRepository.save(newVersion);
+
+        eventPublisher.publishAfterCommit(BundleSupersededEvent.of(
+                existing.getEcoSystem().getId(), existing.getId(), saved.getId(),
+                existing.getVersion(), saved.getVersion()));
+
+        return saved;
     }
 
     @Transactional(readOnly = true)

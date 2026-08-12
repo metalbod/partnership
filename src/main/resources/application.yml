@@ -24,3 +24,15 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+aws:
+  eventbridge:
+    region: ${AWS_REGION:ap-southeast-5}
+    endpoint-override: ${AWS_EVENTBRIDGE_ENDPOINT:}
+
+app:
+  events:
+    bundle-superseded:
+      event-bus-name: ${EVENTBRIDGE_BUS_NAME:partnership-pillar}
+      source: ecosystem-bundle-service
+      detail-type: BundleSuperseded
