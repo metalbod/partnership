@@ -19,11 +19,10 @@ import java.util.UUID;
  * FR-PTR-02/03: whole-bundle-only subscription, across any number of eco-systems.
  * FR-BUN-04 / FR-PTR-07: re-consent workflow when a subscribed bundle is superseded.
  *
- * TODO (integration stub): this service should consume a BundleSuperseded event
- * from ecosystem-bundle-service (via EventBridge \u2013 see /api-contracts) and call
- * flagPendingReconsent() for every affected subscription, rather than relying on
- * a synchronous caller. A REST endpoint is also provided below for MVP simplicity
- * ahead of the event listener being wired up.
+ * flagPendingReconsent() is called by {@link com.company.partnership.partnersubscription.event.BundleSupersededEventListener}
+ * off the SQS queue that ecosystem-bundle-service's EventBridge rule routes
+ * BundleSuperseded events to. SubscriptionController's flag-pending-reconsent REST
+ * endpoint calls the same method and is kept only as a manual/testing fallback.
  */
 @Service
 @RequiredArgsConstructor

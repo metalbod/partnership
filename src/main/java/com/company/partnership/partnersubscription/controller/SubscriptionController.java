@@ -35,7 +35,11 @@ public class SubscriptionController {
         return subscriptionService.findByPartner(partnerId).stream().map(SubscriptionResponse::from).toList();
     }
 
-    /** Internal endpoint, normally driven by the BundleSuperseded integration event (see /api-contracts). */
+    /**
+     * Manual/testing fallback only – production flow is
+     * {@link com.company.partnership.partnersubscription.event.BundleSupersededEventListener}
+     * consuming the BundleSuperseded event off SQS (see /api-contracts).
+     */
     @PostMapping("/flag-pending-reconsent")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void flagPendingReconsent(@RequestBody Map<String, UUID> body) {

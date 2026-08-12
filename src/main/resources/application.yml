@@ -11,6 +11,10 @@ spring:
     open-in-view: false
   profiles:
     active: local
+  cloud:
+    aws:
+      region:
+        static: ${AWS_REGION:ap-southeast-5}
 
 server:
   port: 8083
@@ -24,3 +28,8 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+app:
+  events:
+    bundle-superseded:
+      queue-name: ${BUNDLE_SUPERSEDED_QUEUE_NAME:bundle-superseded-queue}
