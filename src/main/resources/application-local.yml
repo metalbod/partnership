@@ -3,7 +3,7 @@ spring:
     hibernate:
       ddl-auto: update
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_partnersubscription
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=partnersubscription
   cloud:
     aws:
       credentials:
