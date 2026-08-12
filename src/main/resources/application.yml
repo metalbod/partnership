@@ -2,8 +2,8 @@ spring:
   application:
     name: transaction-profitshare-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_transactionprofitshare
-    username: ${DB_USERNAME:partnership_app}
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=transactionprofitshare
+    username: ${DB_USERNAME:transactionprofitshare_app}
     password: ${DB_PASSWORD:changeme_local_only}
   jpa:
     hibernate:
