@@ -1,0 +1,38 @@
+spring:
+  application:
+    name: ecosystem-bundle-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=ecosystembundle
+    username: ${DB_USERNAME:ecosystembundle_app}
+    password: ${DB_PASSWORD:changeme_local_only}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+  profiles:
+    active: local
+
+server:
+  port: 8082
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+aws:
+  eventbridge:
+    region: ${AWS_REGION:ap-southeast-5}
+    endpoint-override: ${AWS_EVENTBRIDGE_ENDPOINT:}
+
+app:
+  events:
+    bundle-superseded:
+      event-bus-name: ${EVENTBRIDGE_BUS_NAME:partnership-pillar}
+      source: ecosystem-bundle-service
+      detail-type: BundleSuperseded
