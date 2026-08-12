@@ -1,0 +1,17 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "BundleSuperseded",
+  "description": "Published by ecosystem-bundle-service when a published Bundle is superseded by a new version (BRD FR-BUN-04). partner-subscription-service should consume this to flag affected PartnerSubscriptions PENDING_RECONSENT. MVP: schema published; the manual equivalent is POST /v1/subscriptions/flag-pending-reconsent on partner-subscription-service until this event is actually wired up on EventBridge.",
+  "type": "object",
+  "required": ["schemaVersion", "eventId", "occurredAt", "oldBundleId", "newBundleId", "ecoSystemId"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "eventId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "ecoSystemId": { "type": "string", "format": "uuid" },
+    "oldBundleId": { "type": "string", "format": "uuid" },
+    "newBundleId": { "type": "string", "format": "uuid" },
+    "oldVersion": { "type": "integer" },
+    "newVersion": { "type": "integer" }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TransactionRecorded",
+  "description": "Published by transaction-profitshare-service to the Partnership Pillar EventBridge bus when a qualifying transaction is recorded, for the Loyalty pillar to accrue points. See BRD Section 8, TDD Section 4.4/7. MVP: schema published, not yet emitted to a live consumer.",
+  "type": "object",
+  "required": ["schemaVersion", "eventId", "occurredAt", "transactionId", "consumerExternalId", "partnerId", "amount"],
+  "properties": {
+    "schemaVersion": { "type": "string", "const": "1.0" },
+    "eventId": { "type": "string", "format": "uuid" },
+    "occurredAt": { "type": "string", "format": "date-time" },
+    "transactionId": { "type": "string", "format": "uuid" },
+    "consumerExternalId": { "type": "string" },
+    "partnerId": { "type": "string", "format": "uuid" },
+    "bundleId": { "type": "string", "format": "uuid" },
+    "offeringId": { "type": "string", "format": "uuid" },
+    "amount": { "type": "number" },
+    "currency": { "type": "string", "default": "MYR" }
+  }
+}
