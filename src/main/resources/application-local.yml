@@ -3,7 +3,7 @@ spring:
     hibernate:
       ddl-auto: update
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_ecosystembundle
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=ecosystembundle
 logging:
   level:
     com.company.partnership: DEBUG

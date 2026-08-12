@@ -2,8 +2,8 @@ spring:
   application:
     name: ecosystem-bundle-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/partnership_ecosystembundle
-    username: ${DB_USERNAME:partnership_app}
+    url: jdbc:postgresql://localhost:5432/partnership?currentSchema=ecosystembundle
+    username: ${DB_USERNAME:ecosystembundle_app}
     password: ${DB_PASSWORD:changeme_local_only}
   jpa:
     hibernate:
