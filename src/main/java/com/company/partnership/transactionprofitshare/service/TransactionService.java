@@ -23,6 +23,7 @@ public class TransactionService {
         tx.setConsumerEnrolmentId(req.consumerEnrolmentId());
         tx.setOfferingId(req.offeringId());
         tx.setBundleId(req.bundleId());
+        tx.setEcoSystemId(req.ecoSystemId());
         tx.setPartnerId(req.partnerId());
         tx.setVendorId(req.vendorId());
         tx.setAmount(req.amount());

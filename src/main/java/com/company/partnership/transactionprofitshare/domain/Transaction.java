@@ -41,6 +41,10 @@ public class Transaction {
     @Column(nullable = false)
     private UUID bundleId;
 
+    /** References ecosystem-bundle-service EcoSystem.id, denormalised for profit-share rule fallback. */
+    @Column(nullable = false)
+    private UUID ecoSystemId;
+
     /** References partner-subscription-service Partner.id, denormalised here for profit-share attribution. */
     @Column(nullable = false)
     private UUID partnerId;

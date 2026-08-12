@@ -9,6 +9,7 @@ public record TransactionRequest(
         @NotNull UUID consumerEnrolmentId,
         @NotNull UUID offeringId,
         @NotNull UUID bundleId,
+        @NotNull UUID ecoSystemId,
         @NotNull UUID partnerId,
         @NotNull UUID vendorId,
         @NotNull BigDecimal amount,

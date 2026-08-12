@@ -86,15 +86,27 @@ public class ProfitShareCalculationService {
         return new SplitResult(vendorAmount, companyAmount, partnerAmount);
     }
 
+    /**
+     * Falls back from the most specific configured rule to the least specific:
+     * exact vendor+bundle+partner match -> bundle-level (any vendor/partner under
+     * that bundle) -> eco-system-level (any bundle/vendor/partner under that
+     * eco-system). A bundle/eco-system-level rule is one where the narrower scope
+     * fields were deliberately left null when the rule was configured.
+     */
     private Optional<ProfitShareRule> resolveRule(Transaction tx) {
-        // Simplified MVP resolution: exact vendor+bundle+partner match only.
-        // TODO: broaden to fall back to bundle-level, then eco-system-level rules
-        // as described in the class-level Javadoc, once ProfitShareRule scope
-        // querying is implemented in the repository layer.
-        return ruleRepository.findAll().stream()
-                .filter(r -> tx.getVendorId().equals(r.getVendorId()))
-                .filter(r -> tx.getBundleId().equals(r.getBundleId()))
-                .filter(r -> tx.getPartnerId().equals(r.getPartnerId()))
-                .findFirst();
+        Optional<ProfitShareRule> exact = ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(
+                tx.getVendorId(), tx.getBundleId(), tx.getPartnerId());
+        if (exact.isPresent()) {
+            return exact;
+        }
+
+        Optional<ProfitShareRule> bundleLevel = ruleRepository
+                .findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(tx.getBundleId());
+        if (bundleLevel.isPresent()) {
+            return bundleLevel;
+        }
+
+        return ruleRepository.findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(
+                tx.getEcoSystemId());
     }
 }

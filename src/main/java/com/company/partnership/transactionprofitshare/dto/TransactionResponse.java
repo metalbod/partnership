@@ -7,11 +7,11 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record TransactionResponse(
-        UUID id, UUID offeringId, UUID bundleId, UUID partnerId, UUID vendorId,
+        UUID id, UUID offeringId, UUID bundleId, UUID ecoSystemId, UUID partnerId, UUID vendorId,
         BigDecimal amount, boolean isInsuranceOffering, Instant transactionTimestamp
 ) {
     public static TransactionResponse from(Transaction t) {
-        return new TransactionResponse(t.getId(), t.getOfferingId(), t.getBundleId(), t.getPartnerId(),
-                t.getVendorId(), t.getAmount(), t.isInsuranceOffering(), t.getTransactionTimestamp());
+        return new TransactionResponse(t.getId(), t.getOfferingId(), t.getBundleId(), t.getEcoSystemId(),
+                t.getPartnerId(), t.getVendorId(), t.getAmount(), t.isInsuranceOffering(), t.getTransactionTimestamp());
     }
 }
