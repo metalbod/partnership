@@ -26,7 +26,7 @@ API docs: http://localhost:8082/swagger-ui.html
 | POST | /v1/bundles/{id}/publish | Publish a bundle (locks its composition, FR-BUN-03) |
 | POST | /v1/bundles/{id}/new-version | Create a new version of a published bundle (FR-BUN-04) |
 
-## \u26a0\ufe0f Critical business rule
+## ⚠️ Critical business rule
 Once a bundle is `PUBLISHED`, its `offeringIds` are **immutable**. Any change to the
 offering mix MUST go through `POST /v1/bundles/{id}/new-version`, which creates a new
 `Bundle` row and marks the old one `SUPERSEDED` – never `PUT`/mutate a published

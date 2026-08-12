@@ -67,7 +67,7 @@ BNM/FSA/IFSA (insurance policy-level data handling).
 peak. Indicative MVP AWS cost: **~$345–565/month** (order of magnitude, not a
 quote – NAT Gateway data transfer flagged as the likely "hidden cost" to watch).
 
-## Scalability & future evolution (MVP component \u2192 future direction)
+## Scalability & future evolution (MVP component → future direction)
 
 | MVP | Future |
 |---|---|
@@ -81,7 +81,7 @@ quote – NAT Gateway data transfer flagged as the likely "hidden cost" to watch
 
 ## DR/HA targets (MVP)
 
-RTO \u2264 4 hours, RPO \u2264 24 hours (targeting near-real-time via Multi-AZ sync).
+RTO ≤ 4 hours, RPO ≤ 24 hours (targeting near-real-time via Multi-AZ sync).
 Cross-region DR explicitly out of MVP scope (cost-effectiveness trade-off).
 
 ## What this means for the current scaffold

@@ -10,20 +10,22 @@ Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes
   requirement (FR-SAL-01/02: Sales sees read-only counts of vendors AND partners
   they signed up). Don't remove this field or its enum without checking the BRD.
 
-## Re-consent workflow – how it should end up wired
-1. `ecosystem-bundle-service` supersedes a bundle (new version created).
-2. It should publish a `BundleSuperseded` event (see `/api-contracts` at the
-   workspace root) carrying `{oldBundleId, newBundleId}`.
-3. This service should have an event listener that calls
+## Re-consent workflow – how it's wired
+1. `ecosystem-bundle-service` supersedes a bundle (new version created) and
+   publishes a `BundleSuperseded` event to EventBridge (see `/api-contracts`
+   for the shape).
+2. `event/BundleSupersededEventListener.java` here consumes it off the SQS
+   queue an EventBridge rule routes it to, and calls
    `SubscriptionService.flagPendingReconsent(oldBundleId, newBundleId)`.
-4. Until that listener exists, `POST /v1/subscriptions/flag-pending-reconsent` is
-   a manual/synchronous stand-in – wire the real listener before UAT.
-5. Consumers under a `PENDING_RECONSENT` subscription keep using the OLD bundle
+   Disabled under the `test` profile (see `@Profile("!test")` on the listener)
+   since the Spring context test has no real queue to resolve.
+3. `POST /v1/subscriptions/flag-pending-reconsent` still exists but is a
+   manual/testing fallback only now – the listener is the primary path.
+4. Consumers under a `PENDING_RECONSENT` subscription keep using the OLD bundle
    (don't change `bundleId` until `reconsent()` is called) – this is the guarantee
    BRD Section 4.2 makes to partners.
 
 ## Likely next tasks
-- Add the EventBridge listener described above (replaces the manual endpoint).
 - Add partner-facing "my subscriptions pending re-consent" query endpoint for the
   Partner Portal (FR-PTR-04/07).
 - Add a uniqueness constraint: a partner should not hold two ACTIVE subscriptions

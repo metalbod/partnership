@@ -13,7 +13,9 @@ based on the approved BRD, SDD and TDD (see `/docs`).
    ```bash
    docker compose up -d
    ```
-   This starts Postgres (with one database per service) and Redis.
+   This starts Postgres (one `partnership` database, one schema per service),
+   Redis, and LocalStack (EventBridge + SQS, for the BundleSuperseded event
+   flow between ecosystem-bundle-service and partner-subscription-service).
 
 2. **Run a service:**
    ```bash
@@ -34,9 +36,10 @@ based on the approved BRD, SDD and TDD (see `/docs`).
 
 ## Repository structure
 
-This is a **multi-repo** workspace: each folder under `services/` is meant to
-become (or already is) its own git repository. See `CLAUDE.md` for the full
-layout and rationale.
+This is a single monorepo. It used to be eight separate per-service/per-component
+repositories, merged in via `git subtree` with full commit history preserved.
+See `CLAUDE.md` for the full layout and what that history-preservation tradeoff
+means for `git log`/`git blame` across the merge seams.
 
 ## Documentation
 
@@ -53,5 +56,9 @@ layout and rationale.
 
 Backend services are scaffolded with domain entities, business-rule-encoding
 service layers, REST controllers and Flyway migrations – enough to run locally
-and iterate on. Frontend, auth, CI/CD, IaC and AWS deployment are not yet
-started. See `CLAUDE.md` \u2192 "What's scaffolded vs. what's still a TODO."
+and iterate on, including a real EventBridge → SQS integration (via LocalStack
+locally) for the bundle re-consent workflow. The Admin Console
+(`frontend/admin-console`) is a working walking skeleton hitting all four
+services; the Partner Portal is still a placeholder. Auth, CI/CD, IaC and AWS
+deployment are not yet started. See `CLAUDE.md` → "What's scaffolded vs. what's
+still a TODO."

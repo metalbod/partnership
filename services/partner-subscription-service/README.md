@@ -25,7 +25,7 @@ API docs: http://localhost:8083/swagger-ui.html
 | POST | /v1/subscriptions/{id}/reconsent | Partner re-consents to a new bundle version (FR-PTR-07) |
 | POST | /v1/subscriptions/flag-pending-reconsent | Internal: mark subscriptions pending re-consent (MVP stub for the BundleSuperseded event) |
 
-## \u26a0\ufe0f Critical business rule
+## ⚠️ Critical business rule
 Subscriptions are **whole-bundle only** – there is deliberately no offering-level
 selection field anywhere in this service's API. If a partner needs a different mix,
 the answer is "ecosystem-bundle-service creates a new bundle", not "let them pick

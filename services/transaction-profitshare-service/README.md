@@ -23,7 +23,7 @@ API docs: http://localhost:8084/swagger-ui.html
 | POST | /v1/transactions | Record a transaction (FR-RPT-01/02) |
 | POST | /v1/profit-share/run?periodStart=...&periodEnd=... | Run the periodic calculation (local/manual trigger; production trigger is the scheduled AWS Lambda job per TDD 4.4) |
 
-## \u26a0\ufe0f Critical business rules
+## ⚠️ Critical business rules
 - **MVP is reporting-only – no payment execution** (BRD FR-RPT-07). Do not add any
   code that moves money, calls a payment gateway, or marks a report "paid" – that
   is explicitly out of scope until the future ledger/settlement platform exists

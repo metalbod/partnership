@@ -16,15 +16,26 @@ that mutates a PUBLISHED bundle in place, stop – that violates BRD FR-BUN-03 a
 breaks the partner re-consent guarantee in FR-BUN-04. Partners on the old version
 must keep working against the old (locked) bundle until they explicitly re-consent.
 
-## Integration stub (not yet wired)
-When a bundle is superseded, `partner-subscription-service` needs to flag affected
-subscriptions `PENDING_RECONSENT`. For MVP this is a manual/synchronous REST call
-(`POST /v1/subscriptions/flag-pending-reconsent` on that service). The TDD's target
-design is an EventBridge `BundleSuperseded` event instead – see `/api-contracts`
-at the workspace root for the event shape to implement when ready.
+## Integration: BundleSuperseded event
+When a bundle is superseded, `createNewVersion()` publishes a `BundleSuperseded`
+event to EventBridge (see `event/BundleSupersededEventPublisher.java`) after the
+transaction commits – `partner-subscription-service` consumes it off SQS to flag
+affected subscriptions `PENDING_RECONSENT`. See `/api-contracts` for the event
+shape. Locally this runs against LocalStack (`docker-compose.yml` +
+`infra/local/localstack-init.sh`); against real AWS it's the same
+`EventBridgeClient` with no endpoint override (see `application.yml`'s
+`aws.eventbridge` block). The old manual
+`POST /v1/subscriptions/flag-pending-reconsent` endpoint on that service still
+exists as a fallback only – don't rely on it as the primary path.
+
+## Gotcha: @ElementCollection fetch type
+`Bundle.offeringIds` and `EcoSystem.assignedOfferingIds` are `EAGER`, not the JPA
+default `LAZY` – `open-in-view` is off, so a LAZY collection throws outside the
+`@Transactional` service method the moment any controller tries to serialize it
+(every read/publish/list endpoint hits this). Don't change these back to LAZY
+without also fixing that.
 
 ## Likely next tasks
-- Wire the EventBridge publish call in `createNewVersion()` (currently a TODO comment).
 - Add a `GET /v1/eco-systems/{id}/bundles` convenience endpoint.
 - Enforce `offeringIds` non-empty and de-duplicated at the service layer (currently
   only `@NotEmpty` at the DTO level).

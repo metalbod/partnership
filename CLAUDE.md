@@ -54,23 +54,29 @@ profit-share basis, computed periodically (not real-time) in MVP.
 
 ## Repository layout
 
-Each service below is its own git repository (not a monorepo) – see each folder's
-own `.git`. This workspace folder is just a convenient local checkout location.
+This is a single monorepo (one root `.git`). It used to be eight separate
+per-service/per-component repositories, merged in via `git subtree` with full
+commit history preserved – look for the "Merge X repo into monorepo" commits
+marking each seam. Note: `git log -- <path>` and `git blame` don't automatically
+walk through those seams into a component's pre-merge history, since subtree
+grafts each repo's existing commits in as-is rather than rewriting every
+historical path with its new prefix – use `git log <merge-commit-hash>` to
+browse a component's full history from its merge point backward.
 
 ```
 partnership-pillar-platform/
-\u251c\u2500\u2500 services/
-\u2502   \u251c\u2500\u2500 vendor-offering-service/          (Java 21 / Spring Boot, port 8081)
-\u2502   \u251c\u2500\u2500 ecosystem-bundle-service/         (Java 21 / Spring Boot, port 8082)
-\u2502   \u251c\u2500\u2500 partner-subscription-service/     (Java 21 / Spring Boot, port 8083)
-\u2502   \u2514\u2500\u2500 transaction-profitshare-service/  (Java 21 / Spring Boot, port 8084)
-\u251c\u2500\u2500 frontend/
-\u2502   \u251c\u2500\u2500 partner-portal/                   (placeholder – not yet scaffolded)
-\u2502   \u2514\u2500\u2500 admin-console/                    (placeholder – not yet scaffolded)
-\u251c\u2500\u2500 api-contracts/                        (OpenAPI + event schema stubs for cross-pillar integration)
-\u251c\u2500\u2500 infra/                                (IaC – not yet started, see TDD Section 9.2)
-\u251c\u2500\u2500 docs/                                 (BRD, SDD, TDD – source of truth for requirements)
-\u2514\u2500\u2500 docker-compose.yml                    (local Postgres + Redis for dev)
+├── services/
+│   ├── vendor-offering-service/          (Java 21 / Spring Boot, port 8081)
+│   ├── ecosystem-bundle-service/         (Java 21 / Spring Boot, port 8082)
+│   ├── partner-subscription-service/     (Java 21 / Spring Boot, port 8083)
+│   └── transaction-profitshare-service/  (Java 21 / Spring Boot, port 8084)
+├── frontend/
+│   ├── partner-portal/                   (placeholder – not yet scaffolded)
+│   └── admin-console/                    (walking-skeleton Vite/React SPA)
+├── api-contracts/                        (OpenAPI + event schema stubs for cross-pillar integration)
+├── infra/                                (local Postgres/LocalStack bootstrap; AWS IaC not yet started, see TDD Section 9.2)
+├── docs/                                 (BRD, SDD, TDD – source of truth for requirements)
+└── docker-compose.yml                    (local Postgres + Redis + LocalStack for dev)
 ```
 
 Services deliberately do NOT share a schema, call each other's internal Java code,
@@ -105,18 +111,27 @@ Each service has entities, repositories, a service layer with the core business
 rules encoded, REST controllers, Flyway migrations, and a basic Spring context
 test. What's **not** done yet (see each service's own `CLAUDE.md` for specifics):
 
-- Cross-service integration is stubbed as manual REST calls where the real design
-  calls for EventBridge events (see `/api-contracts`) – e.g. bundle supersession
-  should notify partner-subscription-service asynchronously, not via a manual
-  endpoint.
 - No authentication/authorization is wired up yet (target: Amazon Cognito with
   role-based claims per TDD Section 4.5).
-- No frontend exists yet.
+- No Partner Portal frontend exists yet (Admin Console does – see below).
 - No CI/CD, IaC, or actual AWS deployment – this is local-dev-ready only.
-- Profit-share rule resolution only does exact-match; the designed fallback chain
-  (exact \u2192 bundle-level \u2192 eco-system-level) is a TODO.
 - Report export (CSV/PDF to S3) is not implemented – the batch job currently only
   computes splits in memory.
+
+What's now working, beyond the initial scaffold:
+
+- Bundle supersession publishes a real `BundleSuperseded` event to EventBridge
+  (see `/api-contracts`), consumed by partner-subscription-service off SQS – not
+  a manual REST call. Locally this runs against LocalStack (see
+  `docker-compose.yml` + `infra/local/localstack-init.sh`). The manual
+  `POST /v1/subscriptions/flag-pending-reconsent` endpoint still exists as a
+  fallback only.
+- Profit-share rule resolution falls back exact-match → bundle-level →
+  eco-system-level (see `transaction-profitshare-service`'s
+  `ProfitShareCalculationService`), not exact-match only.
+- `frontend/admin-console` is a working walking-skeleton React SPA hitting all
+  four services directly – see its own README for what's deliberately not
+  there yet (auth, a transaction list, pagination).
 
 ## Conventions
 
