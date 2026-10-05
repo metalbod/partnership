@@ -67,12 +67,12 @@ public class ProfitShareCalculationService {
         return reportRepository.save(report);
     }
 
-    /** Resolves the most specific matching rule: partner+bundle+vendor > bundle > eco-system. */
+    /** Resolves the most specific matching rule: exact bundle+partner > bundle > eco-system. */
     public SplitResult calculateSplit(Transaction tx) {
         ProfitShareRule rule = resolveRule(tx)
                 .orElseThrow(() -> new IllegalStateException(
                         "No ProfitShareRule configured for transaction " + tx.getId() +
-                        " (vendor=" + tx.getVendorId() + ", bundle=" + tx.getBundleId() +
+                        " (customer=" + tx.getCustomerName() + ", bundle=" + tx.getBundleId() +
                         ", partner=" + tx.getPartnerId() + ")"));
 
         BigDecimal amount = tx.getAmount();
@@ -88,14 +88,13 @@ public class ProfitShareCalculationService {
 
     /**
      * Falls back from the most specific configured rule to the least specific:
-     * exact vendor+bundle+partner match -> bundle-level (any vendor/partner under
-     * that bundle) -> eco-system-level (any bundle/vendor/partner under that
-     * eco-system). A bundle/eco-system-level rule is one where the narrower scope
+     * exact bundle+partner match -> bundle-level (any partner under that bundle)
+     * -> eco-system-level (any bundle/partner under that eco-system). A bundle/eco-system-level rule is one where the narrower scope
      * fields were deliberately left null when the rule was configured.
      */
     private Optional<ProfitShareRule> resolveRule(Transaction tx) {
-        Optional<ProfitShareRule> exact = ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(
-                tx.getVendorId(), tx.getBundleId(), tx.getPartnerId());
+        Optional<ProfitShareRule> exact = ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(
+                tx.getBundleId(), tx.getPartnerId());
         if (exact.isPresent()) {
             return exact;
         }

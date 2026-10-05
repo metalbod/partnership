@@ -10,7 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-// FR-RPT-01, FR-RPT-02: capture a transaction, incl. insurance policy-level data.
+// FR-RPT-01, FR-RPT-02: capture a customer's whole-bundle subscription through a partner,
+// incl. optional insurance policy-level data when the bundle includes insurance.
 @Service
 @RequiredArgsConstructor
 @Transactional
@@ -20,19 +21,16 @@ public class TransactionService {
 
     public Transaction record(TransactionRequest req) {
         Transaction tx = new Transaction();
-        tx.setConsumerEnrolmentId(req.consumerEnrolmentId());
-        tx.setOfferingId(req.offeringId());
+        tx.setCustomerName(req.customerName().trim());
+        tx.setCustomerPhone(req.customerPhone().trim());
+        tx.setCustomerEmail(req.customerEmail().trim());
         tx.setBundleId(req.bundleId());
         tx.setEcoSystemId(req.ecoSystemId());
         tx.setPartnerId(req.partnerId());
-        tx.setVendorId(req.vendorId());
         tx.setAmount(req.amount());
-        tx.setInsuranceOffering(req.isInsuranceOffering());
-        if (req.isInsuranceOffering()) {
-            tx.setPremium(req.premium());
-            tx.setSumInsured(req.sumInsured());
-            tx.setPolicyNumber(req.policyNumber());
-        }
+        tx.setPremium(req.premium());
+        tx.setSumInsured(req.sumInsured());
+        tx.setPolicyNumber(req.policyNumber());
         return transactionRepository.save(tx);
     }
 

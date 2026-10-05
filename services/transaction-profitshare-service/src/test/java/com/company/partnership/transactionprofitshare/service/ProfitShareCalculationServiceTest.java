@@ -36,7 +36,6 @@ class ProfitShareCalculationServiceTest {
 
     private final UUID ecoSystemId = UUID.randomUUID();
     private final UUID bundleId = UUID.randomUUID();
-    private final UUID vendorId = UUID.randomUUID();
     private final UUID partnerId = UUID.randomUUID();
     private Transaction tx;
 
@@ -47,7 +46,7 @@ class ProfitShareCalculationServiceTest {
         tx = new Transaction();
         tx.setEcoSystemId(ecoSystemId);
         tx.setBundleId(bundleId);
-        tx.setVendorId(vendorId);
+        tx.setCustomerName("Aisyah Rahman");
         tx.setPartnerId(partnerId);
         tx.setAmount(new BigDecimal("100.00"));
     }
@@ -62,7 +61,7 @@ class ProfitShareCalculationServiceTest {
 
     @Test
     void usesExactMatchWhenPresent_withoutFallingBackFurther() {
-        when(ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(vendorId, bundleId, partnerId))
+        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
                 .thenReturn(Optional.of(rule(new BigDecimal("50"), new BigDecimal("30"), new BigDecimal("20"))));
 
         ProfitShareCalculationService.SplitResult split = service.calculateSplit(tx);
@@ -76,7 +75,7 @@ class ProfitShareCalculationServiceTest {
 
     @Test
     void fallsBackToBundleLevelRuleWhenNoExactMatch() {
-        when(ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(vendorId, bundleId, partnerId))
+        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
                 .thenReturn(Optional.empty());
         when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(bundleId))
                 .thenReturn(Optional.of(rule(new BigDecimal("40"), new BigDecimal("40"), new BigDecimal("20"))));
@@ -89,7 +88,7 @@ class ProfitShareCalculationServiceTest {
 
     @Test
     void fallsBackToEcoSystemLevelRuleWhenNoExactOrBundleMatch() {
-        when(ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(vendorId, bundleId, partnerId))
+        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
                 .thenReturn(Optional.empty());
         when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(bundleId))
                 .thenReturn(Optional.empty());
@@ -105,7 +104,7 @@ class ProfitShareCalculationServiceTest {
 
     @Test
     void throwsWhenNoRuleMatchesAtAnyTier() {
-        when(ruleRepository.findFirstByVendorIdAndBundleIdAndPartnerId(any(), any(), any()))
+        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(any(), any()))
                 .thenReturn(Optional.empty());
         when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(any()))
                 .thenReturn(Optional.empty());

@@ -4,16 +4,22 @@ Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes
 
 ## Scope of this service
 - Entities: `Transaction`, `ProfitShareRule`, `ProfitShareReport`.
-- `Transaction` denormalises `partnerId`, `vendorId`, and `ecoSystemId` (not just
-  `offeringId` and `bundleId`) specifically so profit-share attribution doesn't
-  require a cross-service call at report-generation time. Keep this
-  denormalisation when extending the entity – it's intentional, not an oversight.
+- A `Transaction` is a customer's subscription to a partner's WHOLE bundle: it holds
+  the customer's name, phone and email, plus `partnerId`, `bundleId` and
+  `ecoSystemId`. There is deliberately no offering or vendor on it. `partnerId` and
+  `ecoSystemId` are denormalised so profit-share attribution doesn't require a
+  cross-service call at report-generation time – keep that when extending the
+  entity. (Legacy rows may still carry `offering_id`/`vendor_id`; the columns are
+  nullable and unused.)
+- Customer contact details are personal data. The data-residency analysis already
+  treats this service as the most sensitive one; this raises it further.
 
 ## Rule resolution: exact → bundle-level → eco-system-level
 `ProfitShareCalculationService.resolveRule()` tries, in order: an exact
-vendor+bundle+partner match, then a bundle-level rule (bundleId set, vendorId
-and partnerId left null when the rule was configured), then an eco-system-level
-rule (only ecoSystemId set). See `ProfitShareRuleRepository`'s query methods for
+bundle+partner rule (vendorId left null), then a bundle-level rule (only bundleId
+set), then an eco-system-level rule (only ecoSystemId set). The old exact tier
+matched vendor+bundle+partner; with whole-bundle transactions there is no single
+vendor to match, so the vendor share is pooled per bundle rule. See `ProfitShareRuleRepository`'s query methods for
 how each tier is matched, and `ProfitShareCalculationServiceTest` for coverage
 of all three tiers plus the no-match failure case.
 

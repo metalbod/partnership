@@ -11,11 +11,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * A record of a consumer using/redeeming/purchasing an Offering under a subscribed
- * Bundle. Basis for periodic profit-share computation (BRD Section 6).
+ * A customer (e.g. a student) subscribing, through a partner, to that partner's WHOLE
+ * Bundle. Customers never pick a single offering, so a transaction carries no offering
+ * or vendor. Basis for periodic profit-share computation (BRD Section 6).
  *
- * For insurance offerings, policy-level fields are captured per BRD Section 6.2
- * ("Data Captured for Profit-Share") \u2013 premium, sum insured, policy number.
+ * Customer contact details are personal data held by this service \u2013 relevant to the
+ * data-residency work (see docs/TDD-summary.md). Insurance policy-level fields
+ * (premium, sum insured, policy number) are optional, BRD Section 6.2.
  */
 @Entity
 @Table(name = "transaction")
@@ -29,13 +31,15 @@ public class Transaction {
     @GeneratedValue
     private UUID id;
 
-    /** References a consumer enrolment record (external ID from Store-Front pillar via Consumer Enrolment API). */
-    @Column(nullable = false)
-    private UUID consumerEnrolmentId;
+    /** The customer (e.g. student) who subscribed, registered directly at transaction time. */
+    @Column(nullable = false, length = 200)
+    private String customerName;
 
-    /** References vendor-offering-service Offering.id. */
-    @Column(nullable = false)
-    private UUID offeringId;
+    @Column(nullable = false, length = 50)
+    private String customerPhone;
+
+    @Column(nullable = false, length = 254)
+    private String customerEmail;
 
     /** References ecosystem-bundle-service Bundle.id \u2013 the bundle this transaction was made under. */
     @Column(nullable = false)
@@ -49,16 +53,10 @@ public class Transaction {
     @Column(nullable = false)
     private UUID partnerId;
 
-    /** References vendor-offering-service Vendor.id, denormalised here for profit-share attribution. */
-    @Column(nullable = false)
-    private UUID vendorId;
-
     @Column(nullable = false, precision = 14, scale = 2)
     private BigDecimal amount;
 
-    private boolean isInsuranceOffering = false;
-
-    // --- Insurance policy-level data (BRD Section 6.2); null for non-insurance offerings ---
+    // --- Insurance policy-level data (BRD Section 6.2); optional, only when the bundle includes insurance ---
     @Column(precision = 14, scale = 2)
     private BigDecimal premium;
 

@@ -20,7 +20,8 @@ Four tabs, each talking to one or more of the backend services directly (ports
   bundle, re-consent a `PENDING_RECONSENT` subscription (the tail end of the
   EventBridge → SQS BundleSuperseded flow – see `ecosystem-bundle-service` and
   `partner-subscription-service` CLAUDE.md files).
-- **Transactions & Profit-Share** – record a transaction, trigger the periodic
+- **Transactions & Profit-Share** – register a customer (name, contact, email) against
+  a partner and the bundle they subscribed to as a whole, trigger the periodic
   profit-share calculation on demand (reporting-only – no payment execution).
 
 ## What's NOT here (by design, for now)
