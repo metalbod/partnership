@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
-import type { Bundle, EcoSystem, Partner, Subscription } from "../types";
+import type { Bundle, EcoSystem, Offering, Partner, PriceKind, Subscription } from "../types";
 import { ErrorBanner, StatusBadge, shortId } from "../components";
+import { breakdown, myr, priceLabel } from "../pricing";
 
 export function PartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
@@ -17,6 +18,10 @@ export function PartnersPage() {
   const [subEcoId, setSubEcoId] = useState("");
   const [subBundles, setSubBundles] = useState<Bundle[]>([]);
   const [subBundleId, setSubBundleId] = useState("");
+  const [price, setPrice] = useState("");
+  const [shareType, setShareType] = useState<PriceKind>("PERCENTAGE");
+  const [shareValue, setShareValue] = useState("");
+  const [offerings, setOfferings] = useState<Offering[]>([]);
 
   const loadPartners = () => api.partners.list().then(setPartners).catch((e) => setError(String(e)));
   const loadSubscriptions = (partnerId: string) =>
@@ -25,6 +30,12 @@ export function PartnersPage() {
   useEffect(() => {
     loadPartners();
     api.ecoSystems.list().then(setEcoSystems).catch((e) => setError(String(e)));
+    // Unit prices of every offering, to preview how a bundle's cost would be split.
+    api.vendors
+      .list()
+      .then((vs) => Promise.all(vs.map((v) => api.offerings.listByVendor(v.id))))
+      .then((lists) => setOfferings(lists.flat()))
+      .catch((e) => setError(String(e)));
   }, []);
 
   useEffect(() => {
@@ -45,6 +56,17 @@ export function PartnersPage() {
       .then((all) => setSubBundles(all.filter((b) => b.status === "PUBLISHED")))
       .catch((e) => setError(String(e)));
   }, [subEcoId]);
+
+  const chosenBundle = subBundles.find((b) => b.id === subBundleId);
+  const preview =
+    chosenBundle && Number(price) > 0 && shareValue !== ""
+      ? breakdown(
+          Number(price),
+          shareType,
+          Number(shareValue),
+          chosenBundle.offeringIds.map((id) => offerings.find((o) => o.id === id)).filter((o): o is Offering => !!o),
+        )
+      : null;
 
   async function createPartner(e: React.FormEvent) {
     e.preventDefault();
@@ -69,7 +91,16 @@ export function PartnersPage() {
     setError(null);
     setBusy(true);
     try {
-      await api.subscriptions.subscribe({ partnerId: selected.id, bundleId: bundle.id, bundleVersion: bundle.version });
+      await api.subscriptions.subscribe({
+        partnerId: selected.id,
+        bundleId: bundle.id,
+        bundleVersion: bundle.version,
+        subscriptionPrice: Number(price),
+        partnerShareType: shareType,
+        partnerShareValue: Number(shareValue),
+      });
+      setPrice("");
+      setShareValue("");
       setSubBundleId("");
       await loadSubscriptions(selected.id);
     } catch (e) {
@@ -138,7 +169,49 @@ export function PartnersPage() {
                   ))}
                 </select>
               </label>
-              <button className="primary" disabled={busy || !subBundleId}>
+              {subBundleId && (
+                <>
+                  <label>
+                    Cost of the bundle for this partner (MYR)
+                    <input value={price} onChange={(e) => setPrice(e.target.value)} type="number" step="0.01" min="0.01" required />
+                  </label>
+                  <label>
+                    Partner's share is…
+                    <select value={shareType} onChange={(e) => setShareType(e.target.value as PriceKind)}>
+                      <option value="PERCENTAGE">A percentage of the cost</option>
+                      <option value="FIXED">A fixed amount (MYR)</option>
+                    </select>
+                  </label>
+                  <label>
+                    {shareType === "FIXED" ? "Partner's share (MYR)" : "Partner's share (%)"}
+                    <input
+                      value={shareValue}
+                      onChange={(e) => setShareValue(e.target.value)}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      max={shareType === "PERCENTAGE" ? 100 : undefined}
+                      required
+                    />
+                  </label>
+                  {preview && (
+                    <div className="mono" style={{ fontSize: "0.8rem" }}>
+                      {preview.lines.map((l) => (
+                        <div key={l.offering.id}>
+                          {l.offering.name}: {myr(l.amount)}
+                        </div>
+                      ))}
+                      <div>Vendors: {myr(preview.vendorTotal)}</div>
+                      <div>Partner: {myr(preview.partner)}</div>
+                      <div style={{ color: preview.company < 0 ? "var(--danger)" : undefined }}>Company keeps: {myr(preview.company)}</div>
+                    </div>
+                  )}
+                  {preview && preview.company < 0 && (
+                    <p className="error">The vendors' and partner's shares exceed the bundle cost.</p>
+                  )}
+                </>
+              )}
+              <button className="primary" disabled={busy || !subBundleId || (preview ? preview.company < 0 : false)}>
                 Subscribe (whole bundle)
               </button>
             </form>
@@ -188,6 +261,7 @@ export function PartnersPage() {
                   <tr>
                     <th>Bundle</th>
                     <th>Version</th>
+                    <th>Cost · partner share</th>
                     <th>Status</th>
                     <th></th>
                   </tr>
@@ -197,6 +271,10 @@ export function PartnersPage() {
                     <tr key={s.id}>
                       <td className="mono">{shortId(s.bundleId)}</td>
                       <td>{s.bundleVersionAtSubscription}</td>
+                      <td>
+                        {myr(s.subscriptionPrice)}
+                        <div className="mono">{priceLabel(s.partnerShareType, s.partnerShareValue)}</div>
+                      </td>
                       <td>
                         <StatusBadge status={s.status} />
                       </td>

@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "../api";
-import type { Bundle, Offering, Partner, ProfitShareReport, Subscription, Transaction } from "../types";
+import type { Bundle, Offering, Partner, ProfitShareReport, Subscription, Transaction, Vendor } from "../types";
 import { ErrorBanner, StatusBadge, shortId } from "../components";
+import { breakdown, myr, priceLabel } from "../pricing";
 
 export function TransactionsPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
   const [offerings, setOfferings] = useState<Offering[]>([]);
   const [subs, setSubs] = useState<Subscription[]>([]);
   const [bundles, setBundles] = useState<Record<string, Bundle>>({});
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -15,75 +18,73 @@ export function TransactionsPage() {
   const [customerPhone, setCustomerPhone] = useState("");
   const [customerEmail, setCustomerEmail] = useState("");
   const [partnerId, setPartnerId] = useState("");
-  const [bundleId, setBundleId] = useState("");
-  const [amount, setAmount] = useState("");
+  const [subscriptionId, setSubscriptionId] = useState("");
   const [premium, setPremium] = useState("");
   const [sumInsured, setSumInsured] = useState("");
   const [policyNumber, setPolicyNumber] = useState("");
-
-  // No list endpoint exists on transaction-profitshare-service yet – this is a
-  // client-side record of what's been submitted this session, not a persisted view.
-  const [recorded, setRecorded] = useState<Transaction[]>([]);
 
   const [periodStart, setPeriodStart] = useState(() => new Date(Date.now() - 29 * 864e5).toISOString().slice(0, 10));
   const [periodEnd, setPeriodEnd] = useState(() => new Date().toISOString().slice(0, 10));
   const [report, setReport] = useState<ProfitShareReport | null>(null);
 
+  const loadTransactions = () => api.transactions.list().then(setTransactions).catch((e) => setError(String(e)));
+
   useEffect(() => {
     api.partners.list().then(setPartners).catch((e) => setError(String(e)));
-    // Offering types tell us whether a bundle includes insurance (policy details apply).
+    loadTransactions();
     api.vendors
       .list()
-      .then((vs) => Promise.all(vs.map((v) => api.offerings.listByVendor(v.id))))
-      .then((lists) => setOfferings(lists.flat()))
+      .then(async (vs) => {
+        setVendors(vs);
+        setOfferings((await Promise.all(vs.map((v) => api.offerings.listByVendor(v.id)))).flat());
+      })
       .catch((e) => setError(String(e)));
   }, []);
 
-  // A customer subscribes to one of the selected partner's bundles – as a whole.
+  // A customer takes one of the selected partner's programmes – its whole bundle.
   useEffect(() => {
-    setBundleId("");
+    setSubscriptionId("");
     setSubs([]);
     if (!partnerId) return;
     api.subscriptions
       .listByPartner(partnerId)
       .then(async (list) => {
-        const loaded = await Promise.all(list.map((s) => api.bundles.get(s.bundleId)));
+        const sellable = list.filter((s) => s.status === "ACTIVE" || s.status === "PENDING_RECONSENT");
+        const loaded = await Promise.all(sellable.map((s) => api.bundles.get(s.bundleId)));
         setBundles((prev) => ({ ...prev, ...Object.fromEntries(loaded.map((b) => [b.id, b])) }));
-        setSubs(list);
+        setSubs(sellable);
       })
       .catch((e) => setError(String(e)));
   }, [partnerId]);
 
-  const selectedBundle = bundleId ? bundles[bundleId] : undefined;
-  const includesInsurance = useMemo(() => {
-    if (!selectedBundle) return false;
-    const insurance = new Set(offerings.filter((o) => o.offeringType === "INSURANCE").map((o) => o.id));
-    return selectedBundle.offeringIds.some((id) => insurance.has(id));
-  }, [selectedBundle, offerings]);
+  const sub = subs.find((s) => s.id === subscriptionId);
+  const bundle = sub ? bundles[sub.bundleId] : undefined;
+  const bundleOfferings = useMemo(
+    () => (bundle ? bundle.offeringIds.map((id) => offerings.find((o) => o.id === id)).filter((o): o is Offering => !!o) : []),
+    [bundle, offerings],
+  );
+  const includesInsurance = bundleOfferings.some((o) => o.offeringType === "INSURANCE");
+  const preview = sub && sub.subscriptionPrice > 0 ? breakdown(sub.subscriptionPrice, sub.partnerShareType, sub.partnerShareValue, bundleOfferings) : null;
 
   async function recordTransaction(e: React.FormEvent) {
     e.preventDefault();
-    if (!selectedBundle || !partnerId) return;
+    if (!sub) return;
     setError(null);
     setBusy(true);
     try {
-      const tx = await api.transactions.record({
+      await api.transactions.record({
         customerName: customerName.trim(),
         customerPhone: customerPhone.trim(),
         customerEmail: customerEmail.trim(),
-        partnerId,
-        bundleId: selectedBundle.id,
-        ecoSystemId: selectedBundle.ecoSystemId,
-        amount: Number(amount),
-        ...(includesInsurance
+        subscriptionId: sub.id,
+        ...(includesInsurance && policyNumber
           ? { premium: Number(premium), sumInsured: Number(sumInsured), policyNumber: policyNumber.trim() }
           : {}),
       });
-      setRecorded((prev) => [tx, ...prev]);
+      await loadTransactions();
       setCustomerName("");
       setCustomerPhone("");
       setCustomerEmail("");
-      setAmount("");
       setPremium("");
       setSumInsured("");
       setPolicyNumber("");
@@ -100,6 +101,7 @@ export function TransactionsPage() {
     setBusy(true);
     try {
       setReport(await api.profitShare.run(periodStart, periodEnd));
+      await loadTransactions();
     } catch (e) {
       setError(String(e));
     } finally {
@@ -108,7 +110,7 @@ export function TransactionsPage() {
   }
 
   const partnerName = (id: string) => partners.find((p) => p.id === id)?.name ?? shortId(id);
-  const bundleLabel = (id: string) => (bundles[id] ? `${bundles[id].name} (v${bundles[id].version})` : shortId(id));
+  const vendorName = (id: string) => vendors.find((v) => v.id === id)?.name ?? shortId(id);
 
   return (
     <div className="panel">
@@ -139,40 +141,56 @@ export function TransactionsPage() {
             </select>
           </label>
           <label>
-            Bundle (subscribed as a whole)
-            <select value={bundleId} onChange={(e) => setBundleId(e.target.value)} required disabled={!partnerId}>
+            Partner's bundle (taken as a whole)
+            <select value={subscriptionId} onChange={(e) => setSubscriptionId(e.target.value)} required disabled={!partnerId}>
               <option value="">{partnerId ? (subs.length ? "Select…" : "No subscriptions") : "Pick a partner first"}</option>
               {subs.map((s) =>
                 bundles[s.bundleId] ? (
-                  <option key={s.id} value={s.bundleId}>
-                    {bundleLabel(s.bundleId)}
+                  <option key={s.id} value={s.id}>
+                    {bundles[s.bundleId].name} (v{bundles[s.bundleId].version}) · {myr(s.subscriptionPrice)}
                     {s.status === "PENDING_RECONSENT" ? " · pending re-consent" : ""}
                   </option>
                 ) : null,
               )}
             </select>
           </label>
-          <label>
-            Amount (MYR)
-            <input value={amount} onChange={(e) => setAmount(e.target.value)} type="number" step="0.01" min="0.01" required />
-          </label>
+
+          {sub && preview && (
+            <div className="mono" style={{ fontSize: "0.8rem" }}>
+              <div>Customer pays: {myr(sub.subscriptionPrice)}</div>
+              {preview.lines.map((l) => (
+                <div key={l.offering.id}>
+                  · {l.offering.name} ({priceLabel(l.offering.priceType, l.offering.priceValue)}): {myr(l.amount)}
+                </div>
+              ))}
+              <div>Partner ({priceLabel(sub.partnerShareType, sub.partnerShareValue)}): {myr(preview.partner)}</div>
+              <div style={{ color: preview.company < 0 ? "var(--danger)" : undefined }}>Company keeps: {myr(preview.company)}</div>
+              <div>These terms are recorded with the transaction.</div>
+            </div>
+          )}
+          {sub && !preview && <p className="error">This programme has no bundle cost set, so it can't take customers yet.</p>}
+
           {includesInsurance && (
             <>
               <label>
-                Premium (MYR)
-                <input value={premium} onChange={(e) => setPremium(e.target.value)} type="number" step="0.01" min="0" required />
+                Policy number (insurance in this bundle)
+                <input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} />
               </label>
-              <label>
-                Sum insured (MYR)
-                <input value={sumInsured} onChange={(e) => setSumInsured(e.target.value)} type="number" step="0.01" min="0" required />
-              </label>
-              <label>
-                Policy number
-                <input value={policyNumber} onChange={(e) => setPolicyNumber(e.target.value)} required />
-              </label>
+              {policyNumber && (
+                <>
+                  <label>
+                    Premium (MYR)
+                    <input value={premium} onChange={(e) => setPremium(e.target.value)} type="number" step="0.01" min="0" required />
+                  </label>
+                  <label>
+                    Sum insured (MYR)
+                    <input value={sumInsured} onChange={(e) => setSumInsured(e.target.value)} type="number" step="0.01" min="0" required />
+                  </label>
+                </>
+              )}
             </>
           )}
-          <button className="primary" disabled={busy || !bundleId}>
+          <button className="primary" disabled={busy || !sub || !preview || preview.company < 0}>
             Record transaction
           </button>
         </form>
@@ -192,30 +210,42 @@ export function TransactionsPage() {
           </button>
         </form>
         {report && (
-          <p style={{ fontSize: "0.85rem", marginTop: 8 }}>
-            Report <span className="mono">{shortId(report.id)}</span> <StatusBadge status={report.status} /> generated
-            for {report.periodStart} – {report.periodEnd}.
-          </p>
+          <div style={{ fontSize: "0.85rem", marginTop: 8 }}>
+            <p>
+              Report <span className="mono">{shortId(report.id)}</span> <StatusBadge status={report.status} /> ·{" "}
+              {report.transactionCount} transaction(s) · {report.periodStart} – {report.periodEnd}
+            </p>
+            <div className="mono">
+              <div>Total: {myr(report.totalAmount)}</div>
+              <div>Vendors: {myr(report.vendorTotal)}</div>
+              {report.vendors.map((v) => (
+                <div key={v.vendorId}>· {vendorName(v.vendorId)}: {myr(v.amount)}</div>
+              ))}
+              <div>Partners: {myr(report.partnerTotal)}</div>
+              <div>Company: {myr(report.companyTotal)}</div>
+            </div>
+          </div>
         )}
 
         <ErrorBanner message={error} />
       </div>
 
       <div className="card">
-        <h2>Customers registered this session</h2>
-        {recorded.length === 0 && <p className="empty">Nothing recorded yet.</p>}
-        {recorded.length > 0 && (
+        <h2>Transactions</h2>
+        {transactions.length === 0 && <p className="empty">Nothing recorded yet.</p>}
+        {transactions.length > 0 && (
           <table>
             <thead>
               <tr>
                 <th>Customer</th>
                 <th>Partner · bundle</th>
-                <th>Amount</th>
-                <th>Recorded at</th>
+                <th>Paid</th>
+                <th>Breakdown at purchase</th>
+                <th>Report</th>
               </tr>
             </thead>
             <tbody>
-              {recorded.map((t) => (
+              {transactions.map((t) => (
                 <tr key={t.id}>
                   <td>
                     {t.customerName}
@@ -224,10 +254,27 @@ export function TransactionsPage() {
                   </td>
                   <td>
                     {partnerName(t.partnerId)}
-                    <div className="mono">{bundleLabel(t.bundleId)}</div>
+                    <div className="mono">
+                      {t.bundleName ?? shortId(t.bundleId)}
+                      {t.bundleVersion ? ` v${t.bundleVersion}` : ""}
+                    </div>
                   </td>
-                  <td>{t.amount}</td>
-                  <td>{new Date(t.transactionTimestamp).toLocaleString()}</td>
+                  <td>{myr(t.amount)}</td>
+                  <td className="mono">
+                    {t.offerings.length === 0 && <div>No snapshot (legacy)</div>}
+                    {t.offerings.map((o) => (
+                      <div key={o.offeringId}>
+                        {o.offeringName}: {myr(o.amount)}
+                      </div>
+                    ))}
+                    {t.offerings.length > 0 && (
+                      <>
+                        <div>Partner: {myr(t.partnerAmount)}</div>
+                        <div>Company: {myr(t.companyAmount)}</div>
+                      </>
+                    )}
+                  </td>
+                  <td>{t.includedInReportId ? <span className="mono">{shortId(t.includedInReportId)}</span> : "Pending"}</td>
                 </tr>
               ))}
             </tbody>

@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
@@ -34,6 +35,21 @@ public class ProfitShareReport {
 
     @Column(nullable = false)
     private Instant generatedAt = Instant.now();
+
+    private int transactionCount;
+
+    /** Totals across the transactions in this report, from each transaction's own snapshot. */
+    @Column(nullable = false, precision = 16, scale = 2)
+    private BigDecimal totalAmount = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 16, scale = 2)
+    private BigDecimal vendorTotal = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 16, scale = 2)
+    private BigDecimal partnerTotal = BigDecimal.ZERO;
+
+    @Column(nullable = false, precision = 16, scale = 2)
+    private BigDecimal companyTotal = BigDecimal.ZERO;
 
     /** S3 object key/URI of the exported report file (see TDD Section 4.3). */
     private String exportFileReference;

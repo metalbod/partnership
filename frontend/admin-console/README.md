@@ -13,11 +13,12 @@ eco-systems, bundles, partners, profit-share reports.
 Four tabs, each talking to one or more of the backend services directly (ports
 8081–8084, see `src/api.ts`):
 
-- **Vendors & Offerings** – create vendors, create/list offerings per vendor.
+- **Vendors & Offerings** – create vendors, create/list offerings per vendor, each with the
+  vendor's unit price (a fixed amount or a % of the bundle cost).
 - **Eco-Systems & Bundles** – create eco-systems, assign offerings, create/publish
   bundles, create new bundle versions (exercises the FR-BUN-03/04 supersession flow).
 - **Partners & Subscriptions** – create partners, subscribe to a whole published
-  bundle, re-consent a `PENDING_RECONSENT` subscription (the tail end of the
+  bundle at an agreed cost and partner share (with a live preview of the split), re-consent a `PENDING_RECONSENT` subscription (the tail end of the
   EventBridge → SQS BundleSuperseded flow – see `ecosystem-bundle-service` and
   `partner-subscription-service` CLAUDE.md files).
 - **Transactions & Profit-Share** – register a customer (name, contact, email) against
@@ -29,10 +30,7 @@ Four tabs, each talking to one or more of the backend services directly (ports
 - **No auth/role-gating.** Cognito isn't wired up anywhere in the platform yet, so
   this shows the Admin's full surface to anyone who opens it. Don't treat this as a
   Sales-safe view.
-- **No transaction list.** `transaction-profitshare-service` has no
-  `GET /v1/transactions` list endpoint yet – the Transactions tab only shows what
-  was recorded in the current browser session, not a persisted view.
-- **No pagination, editing, or delete flows** beyond what each backend already
+- **No pagination, and no editing of prices or terms** – offerings' unit prices and a partner's terms are set once at creation. No delete flows either, beyond what each backend already
   exposes (e.g. Vendor has `PUT`/`DELETE`, not wired up here yet).
 
 ## Run locally

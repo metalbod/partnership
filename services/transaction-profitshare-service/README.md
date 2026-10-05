@@ -1,8 +1,8 @@
 # Transaction & Profit-Share Service
 
-Captures customer transactions – a customer (name, contact, email) subscribing
-through a partner to a whole bundle, with optional insurance policy-level data –
-and runs the periodic, reporting-only profit-share calculation.
+Captures customer transactions – a customer (name, contact, email) taking a partner's
+whole bundle – priced and split from the agreed terms and snapshotted per sale, and
+runs the periodic, reporting-only profit-share report over those snapshots.
 
 **Responsibility (SDD Section 3.1):** Captures transactions; periodic batch
 calculation of profit-share splits.
@@ -21,8 +21,10 @@ API docs: http://localhost:8084/swagger-ui.html
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | /v1/transactions | Record a transaction (FR-RPT-01/02) |
-| POST | /v1/profit-share/run?periodStart=...&periodEnd=... | Run the periodic calculation (local/manual trigger; production trigger is the scheduled AWS Lambda job per TDD 4.4) |
+| POST | /v1/transactions | Register a customer against a partner programme (`subscriptionId`); the price, bundle offerings and Vendor/Partner/Company split are resolved and snapshotted (FR-RPT-01/02) |
+| GET | /v1/transactions | List transactions with their purchase-time breakdown |
+| POST | /v1/profit-share/run?periodStart=...&periodEnd=... | Sum the period's transaction snapshots into a report (local/manual trigger; production trigger is the scheduled AWS Lambda job per TDD 4.4) |
+| GET | /v1/profit-share/reports[/{id}] | Reports with totals and per-vendor earnings |
 
 ## ⚠️ Critical business rules
 - **MVP is reporting-only – no payment execution** (BRD FR-RPT-07). Do not add any

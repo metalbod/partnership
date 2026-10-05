@@ -1,31 +1,33 @@
 package com.company.partnership.transactionprofitshare.service;
 
+import com.company.partnership.transactionprofitshare.domain.OfferingLine;
 import com.company.partnership.transactionprofitshare.domain.ProfitShareReport;
-import com.company.partnership.transactionprofitshare.domain.ProfitShareRule;
 import com.company.partnership.transactionprofitshare.domain.Transaction;
+import com.company.partnership.transactionprofitshare.dto.ProfitShareReportResponse;
+import com.company.partnership.transactionprofitshare.exception.NotFoundException;
 import com.company.partnership.transactionprofitshare.repository.ProfitShareReportRepository;
-import com.company.partnership.transactionprofitshare.repository.ProfitShareRuleRepository;
 import com.company.partnership.transactionprofitshare.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.List;
-import java.util.Optional;
+import java.util.UUID;
 
 /**
- * MVP profit-share engine: PERIODIC, REPORTING-ONLY (BRD Section 6.1). This is
- * intended to be triggered by a scheduled job (TDD Section 4.4: AWS Lambda on an
- * EventBridge Scheduler trigger) rather than called synchronously per transaction.
+ * MVP profit-share reporting: PERIODIC and REPORTING-ONLY (BRD Section 6.1). Intended to be
+ * triggered by a scheduled job (TDD Section 4.4) rather than per transaction.
  *
- * No payment/money movement happens here \u2013 this only produces a ProfitShareReport
- * whose export (CSV/PDF to S3) is handled by a separate reporting/export component
- * (see TDD Section 4.3 \u2013 not yet implemented in this MVP scaffold).
+ * Nothing is re-derived here: each transaction already carries its own breakdown, fixed at
+ * purchase from the terms agreed for the partner's programme. A run sums those snapshots
+ * for the period and marks the transactions as reported, in one database transaction, so
+ * re-running a period can't count a sale twice.
+ *
+ * No payment/money movement happens here – export (CSV/PDF to S3, TDD 4.3) is not yet built.
  */
 @Service
 @RequiredArgsConstructor
@@ -33,79 +35,52 @@ import java.util.Optional;
 public class ProfitShareCalculationService {
 
     private final TransactionRepository transactionRepository;
-    private final ProfitShareRuleRepository ruleRepository;
     private final ProfitShareReportRepository reportRepository;
 
-    public record SplitResult(BigDecimal vendorAmount, BigDecimal companyAmount, BigDecimal partnerAmount) {
-    }
-
-    /**
-     * Runs the periodic batch: finds all transactions not yet included in a report,
-     * with a timestamp before the cutoff, resolves the applicable ProfitShareRule for
-     * each, computes the three-way split, and creates a ProfitShareReport marker.
-     *
-     * The actual CSV/PDF export to S3 (TDD 4.3) and marking transactions with the
-     * resulting report id is left as a TODO for the reporting/export component.
-     */
-    public ProfitShareReport runPeriodicCalculation(LocalDate periodStart, LocalDate periodEnd) {
+    /** Returns null when no unreported transactions fall inside the period. */
+    public ProfitShareReportResponse runPeriodicCalculation(LocalDate periodStart, LocalDate periodEnd) {
+        Instant from = periodStart.atStartOfDay(ZoneOffset.UTC).toInstant();
         Instant cutoff = periodEnd.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
-        List<Transaction> pending = transactionRepository
-                .findByIncludedInReportIdIsNullAndTransactionTimestampBefore(cutoff);
+        List<Transaction> pending = transactionRepository.findReportable(from, cutoff);
+        if (pending.isEmpty()) {
+            return null;
+        }
 
-        // TODO: aggregate `pending` transactions by resolveRule(...) and produce line
-        // items for the export; kept minimal here so the batch entry point and rule
-        // resolution logic are unambiguous starting points for implementation.
+        BigDecimal total = BigDecimal.ZERO, vendors = BigDecimal.ZERO, partners = BigDecimal.ZERO, company = BigDecimal.ZERO;
         for (Transaction tx : pending) {
-            SplitResult split = calculateSplit(tx);
-            // TODO: persist split as a report line item once the report line entity is added.
+            total = total.add(tx.getAmount());
+            vendors = vendors.add(tx.getOfferingLines().stream().map(OfferingLine::getAmount).reduce(BigDecimal.ZERO, BigDecimal::add));
+            partners = partners.add(tx.getPartnerAmount());
+            company = company.add(tx.getCompanyAmount());
         }
 
         ProfitShareReport report = new ProfitShareReport();
         report.setPeriodStart(periodStart);
         report.setPeriodEnd(periodEnd);
         report.setStatus(ProfitShareReport.ReportStatus.GENERATED);
-        return reportRepository.save(report);
+        report.setTransactionCount(pending.size());
+        report.setTotalAmount(total);
+        report.setVendorTotal(vendors);
+        report.setPartnerTotal(partners);
+        report.setCompanyTotal(company);
+        ProfitShareReport saved = reportRepository.save(report);
+        pending.forEach(tx -> tx.setIncludedInReportId(saved.getId()));
+        return respond(saved);
     }
 
-    /** Resolves the most specific matching rule: exact bundle+partner > bundle > eco-system. */
-    public SplitResult calculateSplit(Transaction tx) {
-        ProfitShareRule rule = resolveRule(tx)
-                .orElseThrow(() -> new IllegalStateException(
-                        "No ProfitShareRule configured for transaction " + tx.getId() +
-                        " (customer=" + tx.getCustomerName() + ", bundle=" + tx.getBundleId() +
-                        ", partner=" + tx.getPartnerId() + ")"));
-
-        BigDecimal amount = tx.getAmount();
-        BigDecimal vendorAmount = amount.multiply(rule.getVendorSharePct())
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal companyAmount = amount.multiply(rule.getCompanySharePct())
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        BigDecimal partnerAmount = amount.multiply(rule.getPartnerSharePct())
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-        return new SplitResult(vendorAmount, companyAmount, partnerAmount);
+    @Transactional(readOnly = true)
+    public ProfitShareReportResponse findReport(UUID id) {
+        return respond(reportRepository.findById(id).orElseThrow(() -> new NotFoundException("Report not found: " + id)));
     }
 
-    /**
-     * Falls back from the most specific configured rule to the least specific:
-     * exact bundle+partner match -> bundle-level (any partner under that bundle)
-     * -> eco-system-level (any bundle/partner under that eco-system). A bundle/eco-system-level rule is one where the narrower scope
-     * fields were deliberately left null when the rule was configured.
-     */
-    private Optional<ProfitShareRule> resolveRule(Transaction tx) {
-        Optional<ProfitShareRule> exact = ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(
-                tx.getBundleId(), tx.getPartnerId());
-        if (exact.isPresent()) {
-            return exact;
-        }
+    @Transactional(readOnly = true)
+    public List<ProfitShareReportResponse> findReports() {
+        return reportRepository.findAll().stream()
+                .sorted((a, b) -> b.getGeneratedAt().compareTo(a.getGeneratedAt()))
+                .map(this::respond).toList();
+    }
 
-        Optional<ProfitShareRule> bundleLevel = ruleRepository
-                .findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(tx.getBundleId());
-        if (bundleLevel.isPresent()) {
-            return bundleLevel;
-        }
-
-        return ruleRepository.findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(
-                tx.getEcoSystemId());
+    private ProfitShareReportResponse respond(ProfitShareReport r) {
+        return ProfitShareReportResponse.from(r, transactionRepository.vendorTotalsForReport(r.getId()));
     }
 }

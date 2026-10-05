@@ -24,3 +24,9 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+
+app:
+  upstream:
+    vendor-offering-url: ${VENDOR_OFFERING_URL:http://localhost:8081}
+    ecosystem-bundle-url: ${ECOSYSTEM_BUNDLE_URL:http://localhost:8082}
+    partner-subscription-url: ${PARTNER_SUBSCRIPTION_URL:http://localhost:8083}

@@ -1,118 +1,72 @@
 package com.company.partnership.transactionprofitshare.service;
 
-import com.company.partnership.transactionprofitshare.domain.ProfitShareRule;
+import com.company.partnership.transactionprofitshare.domain.OfferingLine;
+import com.company.partnership.transactionprofitshare.domain.ProfitShareReport;
 import com.company.partnership.transactionprofitshare.domain.Transaction;
+import com.company.partnership.transactionprofitshare.dto.ProfitShareReportResponse;
 import com.company.partnership.transactionprofitshare.repository.ProfitShareReportRepository;
-import com.company.partnership.transactionprofitshare.repository.ProfitShareRuleRepository;
 import com.company.partnership.transactionprofitshare.repository.TransactionRepository;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.math.BigDecimal;
-import java.util.Optional;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ProfitShareCalculationServiceTest {
 
-    @Mock
-    private TransactionRepository transactionRepository;
-    @Mock
-    private ProfitShareRuleRepository ruleRepository;
-    @Mock
-    private ProfitShareReportRepository reportRepository;
+    @Mock private TransactionRepository transactionRepository;
+    @Mock private ProfitShareReportRepository reportRepository;
 
-    private ProfitShareCalculationService service;
-
-    private final UUID ecoSystemId = UUID.randomUUID();
-    private final UUID bundleId = UUID.randomUUID();
-    private final UUID partnerId = UUID.randomUUID();
-    private Transaction tx;
-
-    @BeforeEach
-    void setUp() {
-        service = new ProfitShareCalculationService(transactionRepository, ruleRepository, reportRepository);
-
-        tx = new Transaction();
-        tx.setEcoSystemId(ecoSystemId);
-        tx.setBundleId(bundleId);
-        tx.setCustomerName("Aisyah Rahman");
-        tx.setPartnerId(partnerId);
-        tx.setAmount(new BigDecimal("100.00"));
-    }
-
-    private ProfitShareRule rule(BigDecimal vendorPct, BigDecimal companyPct, BigDecimal partnerPct) {
-        ProfitShareRule r = new ProfitShareRule();
-        r.setVendorSharePct(vendorPct);
-        r.setCompanySharePct(companyPct);
-        r.setPartnerSharePct(partnerPct);
-        return r;
+    private Transaction tx(String amount, String vendor, String partner, String company) {
+        Transaction t = new Transaction();
+        t.setAmount(new BigDecimal(amount));
+        t.getOfferingLines().add(new OfferingLine(UUID.randomUUID(), "Offering", UUID.randomUUID(),
+                OfferingLine.PriceType.FIXED, new BigDecimal(vendor), new BigDecimal(vendor)));
+        t.setPartnerAmount(new BigDecimal(partner));
+        t.setCompanyAmount(new BigDecimal(company));
+        return t;
     }
 
     @Test
-    void usesExactMatchWhenPresent_withoutFallingBackFurther() {
-        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
-                .thenReturn(Optional.of(rule(new BigDecimal("50"), new BigDecimal("30"), new BigDecimal("20"))));
+    void sumsEachTransactionsOwnSnapshotAndMarksThemReported() {
+        Transaction a = tx("2000.00", "620.00", "300.00", "1080.00");
+        Transaction b = tx("480.00", "65.00", "50.00", "365.00");
+        when(transactionRepository.findReportable(any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(a, b));
+        when(reportRepository.save(any(ProfitShareReport.class))).thenAnswer(inv -> {
+            ProfitShareReport r = inv.getArgument(0);
+            r.setId(UUID.randomUUID());
+            return r;
+        });
+        when(transactionRepository.vendorTotalsForReport(any())).thenReturn(List.of());
 
-        ProfitShareCalculationService.SplitResult split = service.calculateSplit(tx);
+        ProfitShareReportResponse report = new ProfitShareCalculationService(transactionRepository, reportRepository)
+                .runPeriodicCalculation(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31));
 
-        assertThat(split.vendorAmount()).isEqualByComparingTo("50.00");
-        assertThat(split.companyAmount()).isEqualByComparingTo("30.00");
-        assertThat(split.partnerAmount()).isEqualByComparingTo("20.00");
-        verify(ruleRepository, never()).findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(any());
-        verify(ruleRepository, never()).findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(any());
+        assertThat(report.transactionCount()).isEqualTo(2);
+        assertThat(report.totalAmount()).isEqualByComparingTo("2480.00");
+        assertThat(report.vendorTotal()).isEqualByComparingTo("685.00");
+        assertThat(report.partnerTotal()).isEqualByComparingTo("350.00");
+        assertThat(report.companyTotal()).isEqualByComparingTo("1445.00");
+        assertThat(a.getIncludedInReportId()).isEqualTo(report.id());
+        assertThat(b.getIncludedInReportId()).isEqualTo(report.id());
     }
 
     @Test
-    void fallsBackToBundleLevelRuleWhenNoExactMatch() {
-        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
-                .thenReturn(Optional.empty());
-        when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(bundleId))
-                .thenReturn(Optional.of(rule(new BigDecimal("40"), new BigDecimal("40"), new BigDecimal("20"))));
-
-        ProfitShareCalculationService.SplitResult split = service.calculateSplit(tx);
-
-        assertThat(split.vendorAmount()).isEqualByComparingTo("40.00");
-        verify(ruleRepository, never()).findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(any());
-    }
-
-    @Test
-    void fallsBackToEcoSystemLevelRuleWhenNoExactOrBundleMatch() {
-        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(bundleId, partnerId))
-                .thenReturn(Optional.empty());
-        when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(bundleId))
-                .thenReturn(Optional.empty());
-        when(ruleRepository.findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(ecoSystemId))
-                .thenReturn(Optional.of(rule(new BigDecimal("60"), new BigDecimal("25"), new BigDecimal("15"))));
-
-        ProfitShareCalculationService.SplitResult split = service.calculateSplit(tx);
-
-        assertThat(split.vendorAmount()).isEqualByComparingTo("60.00");
-        assertThat(split.companyAmount()).isEqualByComparingTo("25.00");
-        assertThat(split.partnerAmount()).isEqualByComparingTo("15.00");
-    }
-
-    @Test
-    void throwsWhenNoRuleMatchesAtAnyTier() {
-        when(ruleRepository.findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(any(), any()))
-                .thenReturn(Optional.empty());
-        when(ruleRepository.findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(any()))
-                .thenReturn(Optional.empty());
-        when(ruleRepository.findFirstByEcoSystemIdAndBundleIdIsNullAndVendorIdIsNullAndPartnerIdIsNull(any()))
-                .thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.calculateSplit(tx))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("No ProfitShareRule configured");
+    void returnsNothingWhenThereIsNothingToReport() {
+        when(transactionRepository.findReportable(any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of());
+        assertThat(new ProfitShareCalculationService(transactionRepository, reportRepository)
+                .runPeriodicCalculation(LocalDate.of(2026, 1, 1), LocalDate.of(2026, 1, 31))).isNull();
     }
 }
