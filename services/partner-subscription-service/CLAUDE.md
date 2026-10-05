@@ -10,6 +10,16 @@ Read the workspace-root `CLAUDE.md` first. This file adds service-specific notes
   requirement (FR-SAL-01/02: Sales sees read-only counts of vendors AND partners
   they signed up). Don't remove this field or its enum without checking the BRD.
 
+## Commercial terms on the subscription
+A `PartnerSubscription` carries the partner programme's terms: `subscriptionPrice` (the
+bundle's cost for this partner's customers) and the partner's share
+(`partnerShareType` FIXED/PERCENTAGE + `partnerShareValue`). Vendors' shares come from
+the offerings' own unit prices and the company keeps the remainder – that final check
+(shares ≤ cost) happens in transaction-profitshare-service at sale time, since the
+offerings live in another service. Terms carry over unchanged on re-consent. Existing
+subscriptions migrated with price 0 (can't take customers until re-subscribed with
+terms); there's no edit-terms endpoint yet.
+
 ## Re-consent workflow – how it's wired
 1. `ecosystem-bundle-service` supersedes a bundle (new version created) and
    publishes a `BundleSuperseded` event to EventBridge (see `/api-contracts`

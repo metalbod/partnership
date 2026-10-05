@@ -35,7 +35,13 @@ export const api = {
   offerings: {
     listByVendor: (vendorId: string) =>
       get<import("./types").Offering[]>(`${VENDOR_OFFERING}/v1/offerings?vendorId=${vendorId}`),
-    create: (body: { vendorId: string; name: string; offeringType: "INSURANCE" | "NON_INSURANCE" }) =>
+    create: (body: {
+      vendorId: string;
+      name: string;
+      offeringType: "INSURANCE" | "NON_INSURANCE";
+      priceType: "FIXED" | "PERCENTAGE";
+      priceValue: number;
+    }) =>
       post<import("./types").Offering>(`${VENDOR_OFFERING}/v1/offerings`, body),
   },
   ecoSystems: {
@@ -66,7 +72,14 @@ export const api = {
   subscriptions: {
     listByPartner: (partnerId: string) =>
       get<import("./types").Subscription[]>(`${PARTNER_SUBSCRIPTION}/v1/subscriptions?partnerId=${partnerId}`),
-    subscribe: (body: { partnerId: string; bundleId: string; bundleVersion: number }) =>
+    subscribe: (body: {
+      partnerId: string;
+      bundleId: string;
+      bundleVersion: number;
+      subscriptionPrice: number;
+      partnerShareType: "FIXED" | "PERCENTAGE";
+      partnerShareValue: number;
+    }) =>
       post<import("./types").Subscription>(`${PARTNER_SUBSCRIPTION}/v1/subscriptions`, body),
     reconsent: (id: string, newBundleVersion: number) =>
       post<import("./types").Subscription>(
@@ -75,14 +88,13 @@ export const api = {
       ),
   },
   transactions: {
+    list: () => get<import("./types").Transaction[]>(`${TRANSACTION_PROFITSHARE}/v1/transactions`),
+    // The price, bundle, offerings and breakdown are resolved server-side from the agreed terms.
     record: (body: {
       customerName: string;
       customerPhone: string;
       customerEmail: string;
-      partnerId: string;
-      bundleId: string;
-      ecoSystemId: string;
-      amount: number;
+      subscriptionId: string;
       premium?: number;
       sumInsured?: number;
       policyNumber?: string;

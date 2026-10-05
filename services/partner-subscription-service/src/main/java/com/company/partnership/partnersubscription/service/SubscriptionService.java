@@ -40,6 +40,9 @@ public class SubscriptionService {
         subscription.setPartner(partner);
         subscription.setBundleId(req.bundleId());
         subscription.setBundleVersionAtSubscription(req.bundleVersion());
+        subscription.setSubscriptionPrice(req.subscriptionPrice());
+        subscription.setPartnerShareType(req.partnerShareType());
+        subscription.setPartnerShareValue(req.partnerShareValue());
         subscription.setStatus(PartnerSubscription.SubscriptionStatus.ACTIVE);
         subscription.setConsentedAt(Instant.now());
         return subscriptionRepository.save(subscription);

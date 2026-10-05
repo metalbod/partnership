@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -39,6 +40,23 @@ public class PartnerSubscription {
     @Column(nullable = false)
     private int bundleVersionAtSubscription;
 
+    /**
+     * Commercial terms agreed for this partner's programme: what the bundle costs the
+     * partner's customers (MYR per subscription) and the partner's share of that cost.
+     * The vendors' shares come from each offering's own unit price; the company's share
+     * is what remains. transaction-profitshare-service snapshots all of this per sale.
+     */
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal subscriptionPrice;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ShareType partnerShareType;
+
+    /** MYR when FIXED; 0\u2013100 when PERCENTAGE of subscriptionPrice. */
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal partnerShareValue;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private SubscriptionStatus status = SubscriptionStatus.ACTIVE;
@@ -51,6 +69,10 @@ public class PartnerSubscription {
 
     @Column(nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
+
+    public enum ShareType {
+        FIXED, PERCENTAGE
+    }
 
     public enum SubscriptionStatus {
         ACTIVE, PENDING_RECONSENT, SUPERSEDED, CANCELLED

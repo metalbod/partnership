@@ -21,7 +21,10 @@ profit-share basis, computed periodically (not real-time) in MVP.
 ## Domain model (non-negotiable business rules)
 
 - **Vendor** offers one or more **Offerings** (insurance or non-insurance – same
-  flow, `offeringType` is informational only, never branch logic on it).
+  flow, `offeringType` is informational only, never branch logic on it). Each
+  offering carries the vendor's **unit price** inside a bundle, set when the
+  offering is created: either a **FIXED** amount (MYR) or a **PERCENTAGE of the
+  bundle cost**. This is what the vendor earns from each bundle sale.
 - **EcoSystem** is a themed collection of vendors/offerings (e.g. Education). Can
   exist with assigned offerings and zero bundles.
 - **Bundle** is a mix-and-match of offerings within one eco-system.
@@ -41,9 +44,20 @@ profit-share basis, computed periodically (not real-time) in MVP.
   (or vendor) on a transaction; customers never pick a single offering. When the
   bundle includes an insurance offering, `premium`, `sumInsured`, `policyNumber`
   are captured with it.
-- **Profit-share** (Vendor / Company / Partner three-way split) is computed
-  **periodically by a scheduled batch job**, not per-transaction, and MVP is
-  **reporting-only – no payment/money movement in this codebase.**
+- **Partner programme terms** are fixed on the `PartnerSubscription` when the
+  partner takes a bundle: the **cost of the bundle** for that partner (what each
+  customer pays) and the **partner's share** of it (FIXED amount or PERCENTAGE of
+  the cost). Vendors earn their offerings' unit prices; the **company keeps the
+  remainder**. Terms where vendors + partner exceed the cost are rejected.
+- **The split is snapshotted per transaction.** When a transaction is recorded the
+  system resolves the subscription, the bundle's offerings and each offering's
+  price, computes the Vendor / Partner / Company breakdown, and stores it on the
+  transaction together with the list of offerings in the bundle at that moment.
+  Later price or terms changes never rewrite past sales.
+- **Profit-share reports** are produced **periodically by a scheduled batch job**
+  that simply adds up those per-transaction snapshots (no per-transaction rule
+  lookup, no rule fallback). MVP is **reporting-only – no payment/money movement
+  in this codebase.**
 
 ## Personas / access control
 
@@ -51,7 +65,7 @@ profit-share basis, computed periodically (not real-time) in MVP.
 - **Partner** – self-service via Partner Portal (own-organisation data only).
 - **Consumer** – not a direct user of this platform.
 - **Internal Admin** – full config access (vendors, eco-systems, bundles, partners,
-  profit-share rules); views all reports.
+  commercial terms); views all reports.
 - **Internal Sales** – READ-ONLY. Sees vendor sign-up AND partner sign-up KPIs only
   (see `Partner.onboardedBy`). No configuration access, no commercial detail beyond
   their own KPI view. Do not give Sales write endpoints.
@@ -86,6 +100,10 @@ partnership-pillar-platform/
 Services deliberately do NOT share a schema, call each other's internal Java code,
 or JOIN across service boundaries. Cross-service references are UUIDs only (e.g.
 `Bundle.offeringIds` holds `vendor-offering-service` Offering IDs with no JOIN/FK).
+The one runtime dependency is `transaction-profitshare-service`, which reads the
+partner's terms, the bundle and the offerings' prices over the other three
+services' public REST APIs when a transaction is recorded (and snapshots them);
+it never reads their data any other way.
 This mirrors the SDD's domain-oriented modularity principle: each service can be
 extracted, rescaled or re-platformed independently as volumes grow (see TDD
 Section 12).
@@ -130,9 +148,12 @@ What's now working, beyond the initial scaffold:
   `docker-compose.yml` + `infra/local/localstack-init.sh`). The manual
   `POST /v1/subscriptions/flag-pending-reconsent` endpoint still exists as a
   fallback only.
-- Profit-share rule resolution falls back exact-match → bundle-level →
-  eco-system-level (see `transaction-profitshare-service`'s
-  `ProfitShareCalculationService`), not exact-match only.
+- Commercial terms drive profit-share: offerings have a unit price (fixed or % of
+  bundle cost), partner programmes have a bundle cost and partner share, and every
+  transaction records the offerings it covered and its Vendor/Partner/Company
+  split at purchase (see `transaction-profitshare-service`'s `PricingCalculator`
+  and `TransactionService`). This replaced the earlier profit-share rule
+  fallback chain; the `profit_share_rule` table is legacy and unused.
 - `frontend/admin-console` is a working walking-skeleton React SPA hitting all
   four services directly – see its own README for what's deliberately not
   there yet (auth, a transaction list, pagination).

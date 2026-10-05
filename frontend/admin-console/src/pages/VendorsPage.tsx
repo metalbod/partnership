@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { api } from "../api";
 import type { Offering, Vendor } from "../types";
 import { ErrorBanner, StatusBadge, shortId } from "../components";
+import { priceLabel } from "../pricing";
 
 export function VendorsPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
@@ -13,6 +14,8 @@ export function VendorsPage() {
   const [vendorEmail, setVendorEmail] = useState("");
   const [offeringName, setOfferingName] = useState("");
   const [offeringType, setOfferingType] = useState<"INSURANCE" | "NON_INSURANCE">("NON_INSURANCE");
+  const [priceType, setPriceType] = useState<"FIXED" | "PERCENTAGE">("FIXED");
+  const [priceValue, setPriceValue] = useState("");
   const [busy, setBusy] = useState(false);
 
   const loadVendors = () => api.vendors.list().then(setVendors).catch((e) => setError(String(e)));
@@ -51,8 +54,9 @@ export function VendorsPage() {
     setError(null);
     setBusy(true);
     try {
-      await api.offerings.create({ vendorId: selected.id, name: offeringName, offeringType });
+      await api.offerings.create({ vendorId: selected.id, name: offeringName, offeringType, priceType, priceValue: Number(priceValue) });
       setOfferingName("");
+      setPriceValue("");
       const refreshed = await api.offerings.listByVendor(selected.id);
       setOfferings(refreshed);
     } catch (e) {
@@ -94,6 +98,25 @@ export function VendorsPage() {
                   <option value="NON_INSURANCE">Non-insurance</option>
                   <option value="INSURANCE">Insurance</option>
                 </select>
+              </label>
+              <label>
+                Unit price is…
+                <select value={priceType} onChange={(e) => setPriceType(e.target.value as typeof priceType)}>
+                  <option value="FIXED">A fixed amount (MYR)</option>
+                  <option value="PERCENTAGE">A percentage of the bundle cost</option>
+                </select>
+              </label>
+              <label>
+                {priceType === "FIXED" ? "Amount (MYR)" : "Percentage of bundle cost (%)"}
+                <input
+                  value={priceValue}
+                  onChange={(e) => setPriceValue(e.target.value)}
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  max={priceType === "PERCENTAGE" ? 100 : undefined}
+                  required
+                />
               </label>
               <button className="primary" disabled={busy}>
                 Add offering
@@ -146,6 +169,7 @@ export function VendorsPage() {
                     <th>ID</th>
                     <th>Name</th>
                     <th>Type</th>
+                    <th>Unit price</th>
                     <th>Status</th>
                   </tr>
                 </thead>
@@ -155,6 +179,7 @@ export function VendorsPage() {
                       <td className="mono">{shortId(o.id)}</td>
                       <td>{o.name}</td>
                       <td>{o.offeringType}</td>
+                      <td>{priceLabel(o.priceType, o.priceValue)}</td>
                       <td>
                         <StatusBadge status={o.status} />
                       </td>

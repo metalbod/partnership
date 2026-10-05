@@ -12,6 +12,13 @@ file adds service-specific notes.
   a NOT NULL foreign key from Offering to any eco-system/bundle concept – that
   association is owned entirely by `ecosystem-bundle-service` via offering IDs.
 
+## Unit price (drives profit-share)
+Every `Offering` has `priceType` + `priceValue`, set by the vendor at creation: `FIXED`
+(a MYR amount) or `PERCENTAGE` (0–100, of the bundle cost). transaction-profitshare-service
+reads this when a sale is recorded to work out the vendor's earnings; this service just
+stores it (percentages above 100 are rejected). Existing offerings migrated to a fixed
+price of 0 until a price is set. There is no edit endpoint for prices yet.
+
 ## Do NOT do here
 - Do not model EcoSystem/Bundle in this service – that's `ecosystem-bundle-service`.
 - Do not add insurance-specific fields (premium, sum insured, policy number) to

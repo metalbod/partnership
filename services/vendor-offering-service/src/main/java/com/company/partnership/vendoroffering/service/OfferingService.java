@@ -29,6 +29,8 @@ public class OfferingService {
         offering.setName(req.name());
         offering.setDescription(req.description());
         offering.setOfferingType(req.offeringType());
+        offering.setPriceType(req.priceType());
+        offering.setPriceValue(req.priceValue());
         return offeringRepository.save(offering);
     }
 

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -46,6 +47,19 @@ public class Offering {
     @Column(nullable = false)
     private OfferingType offeringType;
 
+    /**
+     * The vendor's unit price for this offering when it is sold inside a bundle: either a
+     * FIXED amount (MYR) or a PERCENTAGE of the bundle cost. Used by
+     * transaction-profitshare-service to compute the vendor's share of each transaction.
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private PriceType priceType = PriceType.FIXED;
+
+    /** MYR when priceType is FIXED; 0\u2013100 when PERCENTAGE. */
+    @Column(nullable = false, precision = 14, scale = 2)
+    private BigDecimal priceValue = BigDecimal.ZERO;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private OfferingStatus status = OfferingStatus.ACTIVE;
@@ -57,6 +71,10 @@ public class Offering {
 
     public enum OfferingType {
         INSURANCE, NON_INSURANCE
+    }
+
+    public enum PriceType {
+        FIXED, PERCENTAGE
     }
 
     public enum OfferingStatus {
