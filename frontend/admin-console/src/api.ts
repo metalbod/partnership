@@ -76,14 +76,16 @@ export const api = {
   },
   transactions: {
     record: (body: {
-      consumerEnrolmentId: string;
-      offeringId: string;
+      customerName: string;
+      customerPhone: string;
+      customerEmail: string;
+      partnerId: string;
       bundleId: string;
       ecoSystemId: string;
-      partnerId: string;
-      vendorId: string;
       amount: number;
-      isInsuranceOffering: boolean;
+      premium?: number;
+      sumInsured?: number;
+      policyNumber?: string;
     }) => post<import("./types").Transaction>(`${TRANSACTION_PROFITSHARE}/v1/transactions`, body),
   },
   profitShare: {

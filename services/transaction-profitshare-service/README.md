@@ -1,7 +1,8 @@
 # Transaction & Profit-Share Service
 
-Captures offering redemption/purchase transactions (including insurance
-policy-level data) and runs the periodic, reporting-only profit-share calculation.
+Captures customer transactions – a customer (name, contact, email) subscribing
+through a partner to a whole bundle, with optional insurance policy-level data –
+and runs the periodic, reporting-only profit-share calculation.
 
 **Responsibility (SDD Section 3.1):** Captures transactions; periodic batch
 calculation of profit-share splits.
@@ -28,8 +29,11 @@ API docs: http://localhost:8084/swagger-ui.html
   code that moves money, calls a payment gateway, or marks a report "paid" – that
   is explicitly out of scope until the future ledger/settlement platform exists
   (see TDD Section 12).
-- Insurance offerings must capture `premium`, `sumInsured`, `policyNumber` at the
-  point of transaction (BRD Section 6.2) – these are transaction-time facts, not
+- Transactions are whole-bundle: no offering or vendor is chosen. When the bundle
+  includes insurance, `premium`, `sumInsured`, `policyNumber` are captured at the
+  point of transaction (BRD Section 6.2) – transaction-time facts, not
   offering-level facts (which live in vendor-offering-service).
+- Customer name/contact/email are personal data held here – see the data-residency
+  note in `docs/TDD-summary.md`.
 
 See `CLAUDE.md` in this folder and the workspace-root `CLAUDE.md` before extending.

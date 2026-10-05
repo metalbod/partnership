@@ -35,8 +35,12 @@ profit-share basis, computed periodically (not real-time) in MVP.
 - **Consumer** enrolment/self-service UX belongs to the Store-Front (B2C) pillar,
   not this platform. This platform only exposes a Consumer Enrolment API contract
   and stores enrolment/usage records for profit-share attribution.
-- **Transaction** captures an offering redemption/purchase. Insurance offerings
-  additionally require `premium`, `sumInsured`, `policyNumber` at transaction time.
+- **Transaction** captures a customer (e.g. a student) subscribing, through a
+  partner, to that partner's **whole bundle** – registered with the customer's
+  name, contact number and email, plus partner and bundle. There is no offering
+  (or vendor) on a transaction; customers never pick a single offering. When the
+  bundle includes an insurance offering, `premium`, `sumInsured`, `policyNumber`
+  are captured with it.
 - **Profit-share** (Vendor / Company / Partner three-way split) is computed
   **periodically by a scheduled batch job**, not per-transaction, and MVP is
   **reporting-only – no payment/money movement in this codebase.**

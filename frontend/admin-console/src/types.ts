@@ -65,13 +65,16 @@ export interface Subscription {
 
 export interface Transaction {
   id: UUID;
-  offeringId: UUID;
+  customerName: string;
+  customerPhone: string;
+  customerEmail: string;
+  partnerId: UUID;
   bundleId: UUID;
   ecoSystemId: UUID;
-  partnerId: UUID;
-  vendorId: UUID;
   amount: string;
-  isInsuranceOffering: boolean;
+  premium: string | null;
+  sumInsured: string | null;
+  policyNumber: string | null;
   transactionTimestamp: string;
 }
 

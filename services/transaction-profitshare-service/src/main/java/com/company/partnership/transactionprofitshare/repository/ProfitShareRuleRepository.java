@@ -8,10 +8,13 @@ import java.util.UUID;
 
 public interface ProfitShareRuleRepository extends JpaRepository<ProfitShareRule, UUID> {
 
-    /** Tier 1 (most specific): an exact vendor+bundle+partner match. */
-    Optional<ProfitShareRule> findFirstByVendorIdAndBundleIdAndPartnerId(UUID vendorId, UUID bundleId, UUID partnerId);
+    /**
+     * Tier 1 (most specific): an exact bundle+partner match. A transaction is a customer's
+     * subscription to a whole bundle, so there is no single vendor to match on.
+     */
+    Optional<ProfitShareRule> findFirstByBundleIdAndPartnerIdAndVendorIdIsNull(UUID bundleId, UUID partnerId);
 
-    /** Tier 2: applies to any vendor/partner under a given bundle. */
+    /** Tier 2: applies to any partner under a given bundle. */
     Optional<ProfitShareRule> findFirstByBundleIdAndVendorIdIsNullAndPartnerIdIsNull(UUID bundleId);
 
     /** Tier 3 (least specific): applies to any bundle/vendor/partner under a given eco-system. */
